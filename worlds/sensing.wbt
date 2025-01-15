@@ -1,0 +1,48 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/festo/robotino3/protos/Robotino3.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/solids/protos/SolidBox.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.6482710606100678 0.03814497786215351 0.7604535440376312 3.2682087398809254
+  position 1.2540356060472502 0.7316475325765346 11.435926809885336
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 6 7
+  floorTileSize 0.8 0.8
+  wallHeight 1
+}
+DEF ROBOTINO Robotino3 {
+  hidden position_0_0 4.5749956865908403e-08
+  hidden position_0_1 -7.47883124001501e-08
+  hidden position_0_2 7.477942554951755e-08
+  hidden rotation_1 0 1 0 4.2146848510894035e-08
+  hidden rotation_2 0 -1 0 7.300048299977715e-08
+  hidden rotation_3 0 1 0 7.300048299977715e-08
+  translation -1.8384195452477707 6.4490164004785925e-09 -0.0022915304429357575
+  rotation -0.012443271255019745 -0.9999225136059261 -0.00036302132229488473 1.1713171450265319e-05
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.09
+      horizontalResolution 540
+      fieldOfView 6.2831
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+}
+SolidBox {
+  translation 0 0.81 0.56
+  size 1 1 1
+}
