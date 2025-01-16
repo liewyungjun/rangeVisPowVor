@@ -1,7 +1,9 @@
 import math
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+logger = logging.getLogger(__name__)
 this_dir, this_filename = os.path.split(__file__)
 myfile = os.path.join(this_dir, 'lidar_reading.txt') 
 max_range = 3.0  # Maximum sensor range to replace inf values
@@ -26,7 +28,7 @@ def read_lidar_data():
         return readings
 
     except FileNotFoundError:
-        print("Error: lidar_reading.txt not found")
+        logger.info("Error: lidar_reading.txt not found")
         return []
 
 def control_law(readings,freePointIdx,occlusionVectorPoints):
@@ -51,17 +53,25 @@ def control_law(readings,freePointIdx,occlusionVectorPoints):
     normal_vectors = np.array([(occlusionPointCoords[p][0][1] / readings[occlusionVectorPoints[p][0]],\
                        -occlusionPointCoords[p][0][0] / readings[occlusionVectorPoints[p][0]]) \
                         for p in range(len(occlusionPointCoords))])
-    print("occlusionPointCoords")
-    print(occlusionPointCoords)
+    logger.info("occlusionPointCoords")
+    logger.info(occlusionPointCoords)
     length_component = np.array([np.linalg.norm(p[1] - p[0]) for p in occlusionPointCoords])
-    print("normals")
-    print(normal_vectors)
-    print("TIMES")
-    print(length_component)
-    print("EQUALS_")
+    logger.info("normals")
+    logger.info(normal_vectors)
+    logger.info("TIMES")
+    logger.info(length_component)
+    logger.info("EQUALS_")
     #occlusionArcsComponent = np.sum(normal_vectors * length_component[:, np.newaxis], axis=0)    
     occlusionArcsComponent = sum(np.array([[normal_vectors[p][0]*length_component[p],normal_vectors[p][1]*length_component[p]]for p in range(len(normal_vectors))]))
-    print(occlusionArcsComponent)
+    logger.info(occlusionArcsComponent)
+    return freeArcsComponent,occlusionArcsComponent
+
+def control_law2(readings,filteredFreePointCoords,occlusionVectorPointsCoords):
+    freeArcsComponent = [0.0,0.0]
+    occlusionArcsComponent = [0.0,0.0]
+    freeArcsComponentArr = np.array([[p.x,p.y]for p in filteredFreePointCoords])
+    freeArcsComponent = sum(freeArcsComponentArr)
+
     return freeArcsComponent,occlusionArcsComponent
 
 def process_lidar_data(readings):
@@ -71,8 +81,8 @@ def process_lidar_data(readings):
         if readings[i] >= max_range - collision_readings_buffer: #no collision
             freePointIdx.append(i)
         if abs(readings[i] - readings[i-1]) > occlusion_readings_buffer:
-            # print(f'adding point {i}')
-            # print(f'because {readings[i]}-{readings[i-1]}')
+            # logger.info(f'adding point {i}')
+            # logger.info(f'because {readings[i]}-{readings[i-1]}')
             occlusionVectorPoints.append((i-1,i))
     return freePointIdx,occlusionVectorPoints
 
@@ -82,9 +92,9 @@ if __name__ == '__main__':
     readings = read_lidar_data()
     freePointIdx,occlusionVectorPoints = process_lidar_data(readings)
     freeArcsComponent,occlusionComponent = control_law(readings,freePointIdx,occlusionVectorPoints)
-    print(f"Read in lidar data size {len(readings)}")
-    #print(f'Free Arcs Indexes: {freePointIdx}')
-    print(f'Occlusion Arcs Indexes: {occlusionVectorPoints}')
-    print(f'Free Arcs Component: {freeArcsComponent}')
-    print(f'Occlusion Arcs Component: {occlusionComponent}')
-    #print(lidar_data)
+    logger.info(f"Read in lidar data size {len(readings)}")
+    #logger.info(f'Free Arcs Indexes: {freePointIdx}')
+    logger.info(f'Occlusion Arcs Indexes: {occlusionVectorPoints}')
+    logger.info(f'Free Arcs Component: {freeArcsComponent}')
+    logger.info(f'Occlusion Arcs Component: {occlusionComponent}')
+    #logger.info(lidar_data)
