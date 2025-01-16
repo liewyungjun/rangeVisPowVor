@@ -1,1 +1,2 @@
-/vscode
+.vscode
+/scripts/__pycache__
