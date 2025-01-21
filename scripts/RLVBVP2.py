@@ -1,4 +1,5 @@
 import math
+import shapely
 from shapely import MultiPoint
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union,split
@@ -44,11 +45,11 @@ class OcclusionArc:
                         self.point1 = closest_point
             return True
         else:
-            print("false")
+            #print("false")
             return False
             
 #Range-Limited Visbility-Based Voronoi Partitioning 
-class RLVBVP:
+class RLVBVP2:
     def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt'):
         self.pos = pos
         self.comms_radius = comms_radius
@@ -79,7 +80,6 @@ class RLVBVP:
         this_dir, this_filename = os.path.split(__file__)
         self.myfile = os.path.join(this_dir, lidar_path) 
 
-    #TODO: add inputs to the class: reading neighbour locations
     def read_lidar_data(self):
         try:
             with open(self.myfile, 'r') as file:
@@ -100,17 +100,32 @@ class RLVBVP:
         except FileNotFoundError:
             self.logger.info("Error: lidar_reading.txt not found")
             return
+        
+    def get_lidar_data(self, readings):
+        self.readings = readings
+        return
     
-    def read_neighbor(self,neighbour_coord):
-        self.neighbour_coords = neighbour_coord
+    def read_neighbors(self,neighbours):
+        neighbour_coords = []
+        neighbour_visPolys = []
+        #print(neighbours)
+        if neighbours[0] == []:
+            return
+        for i in neighbours:
+            #print(np.linalg.norm(i.pos,self.pos))
+            if shapely.distance(Point(i.pos[0],i.pos[1]),Point(self.pos[0],self.pos[1]))<self.comms_radius:
+                neighbour_coords.append(i.pos)
+                neighbour_visPolys.append(i.visPoly)
+        self.neighbour_coords = neighbour_coords
+        self.neighbour_visPolys = neighbour_visPolys
         return
 
     def process_lidar_data(self):
         freePointIdx = []
         occlusionArcs = []
+        obstacleLines = []
+        temp = []
         for i in range(len(self.readings)):
-            if self.readings[i] >= self.reading_radius * 0.98: #no collision
-                freePointIdx.append(i)
             if abs(self.readings[i] - self.readings[i-1]) > self.reading_radius * 0.05: #big enough jump for occlusion
                 # logger.info(f'adding point {i}')
                 # logger.info(f'because {readings[i]}-{readings[i-1]}')
@@ -118,8 +133,29 @@ class RLVBVP:
                 p2 = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
 
                 occlusionArcs.append(OcclusionArc(self.pos,p1,p2))
+                if temp:
+                    obstacleLines.append(temp)
+                    temp = []
+
+            if self.readings[i] >= self.reading_radius * 0.98: #no collision
+                freePointIdx.append(i)
+                if temp:
+                    obstacleLines.append(temp)
+                    temp = []
+            else: #collision
+                obsPoint = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],\
+                                 0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
+                temp.append(obsPoint)
+            
+        if temp:
+            obstacleLines.append(temp)
         self.freePointIdx = freePointIdx
         self.occlusionArcs = occlusionArcs
+        obstacleLinesObj  = []
+        for i in obstacleLines:
+            lineObj = LineString(i)
+            obstacleLinesObj.append(lineObj)
+        self.obstacleLines = obstacleLinesObj
         return 
     
     def generate_coordinatesWithPolygon(self):
@@ -141,76 +177,58 @@ class RLVBVP:
         self.neighbour_visPolys = neighbour_VisPolys
         return
 
-    def visibilityPartitioning(self):#find intersection polygon and partition it
-    #find intersection polygon and midpoint
-    #TODO: do this for multiple neighbours
-        circle_poly = self.neighbour_visPolys[0]
-        intersection = self.visPoly.intersection(circle_poly)
-        midpoint_x = (self.pos[0] + self.neighbour_coords[0][0]) / 2
-        midpoint_y = (self.pos[1] + self.neighbour_coords[0][1]) / 2
+    ################################################################################################
+    def visibilityPartitioning(self):
+        #raycast every point in self.reading_coords
+        #TODO: do this for multiple neighbours
+        neighbourPoints = []
+        count = 0
+        vis_count = 0
+        for i in range(len(self.reading_coords)):
+            point = Point(self.reading_coords[i][0], self.reading_coords[i][1])
+            dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
+            dist_to_neighbor = Point(self.neighbour_coords[0][0], self.neighbour_coords[0][1]).distance(point)
+            if dist_to_neighbor < dist_to_self:
+                count +=1
+                # Point is closer to neighbor
+                # Create a line from point to neighbor
+                neighbor_point = Point(self.neighbour_coords[0][0], self.neighbour_coords[0][1])
+                pointLine = Point(point.x*0.999,point.y*0.999)
+                line = LineString([pointLine, neighbor_point])
+                
+                # Check if line intersects with visibility polygon
+                clear = True
+                for j in self.obstacleLines:
+                    if line.intersects(j):
+                        clear = False
+                        break
+                if clear:
+                    neighbourPoints.append(point)
+                    vis_count +=1
+        self.neighbourPoints = neighbourPoints
+        self.neighbour_visPolys[0] = Polygon(neighbourPoints)
+        print(f'count: {count} vis_count: {vis_count}')
+        return
 
-        # Calculate perpendicular vector
-        # Original vector is (self.neighbour_coords[0].x - self.pos.x, self.neighbour_coords[0].y - self.pos.y)
-        # Perpendicular vector is (-dy, dx)
-        dx = self.neighbour_coords[0][0] - self.pos[0]
-        dy = self.neighbour_coords[0][1] - self.pos[1]
-        perp_dx = -dy
-        perp_dy = dx
-
-        # Normalize perpendicular vector and scale it
-        scale = 1.0  # Length of perpendicular line
-        length = np.sqrt(perp_dx**2 + perp_dy**2)
-        perp_dx = (perp_dx / length) * scale
-        perp_dy = (perp_dy / length) * scale
-
-        # Create a line that extends far beyond the intersection
-        line_length = 100  # Make it long enough to cross the entire intersection
-        bisector_line = LineString([
-            (midpoint_x - perp_dx * line_length, midpoint_y - perp_dy * line_length),
-            (midpoint_x + perp_dx * line_length, midpoint_y + perp_dy * line_length)
-        ])
-
-        # Split the intersection polygon with the bisector line
-        split_polys = split(intersection, bisector_line)
-        split_poly_colors = ['' for p in split_polys.geoms]
-        # For each part of the split intersection, determine which starting point it's closer to
-        for poly in range(len(split_polys.geoms)):
-            # Get centroid of the polygon part
-            centroid = split_polys.geoms[poly].centroid
-            
-            # Calculate distances to starting points
-            dist_to_self_pos = Point(self.pos[0], self.pos[1]).distance(centroid)
-            dist_to_self_neighbour_coords = Point(self.neighbour_coords[0][0], self.neighbour_coords[0][1]).distance(centroid)
-            
-            # Color based on closest starting point
-            split_poly_colors[poly] = 'lightblue' if dist_to_self_pos < dist_to_self_neighbour_coords else 'lightcoral'
-        self.intersectionPolys = split_polys
-        self.intersectionPolysAllocation = split_poly_colors
-        self.bisector_line = bisector_line
-        return 
-
-    def slice_visPoly(self):#TODO: improve with point raycasting
+    def slice_visPoly(self):
         self.slicedVisPoly = self.visPoly
-        for i in range(len(self.intersectionPolysAllocation)):
-            if self.intersectionPolysAllocation[i] == 'lightcoral':
-                self.slicedVisPoly = self.slicedVisPoly.difference(self.intersectionPolys.geoms[i])
-                #print("filtering shape")
+        self.slicedVisPoly = self.slicedVisPoly.difference(self.neighbour_visPolys[0])
         return 
     
     def filter_coord_points(self):
         filteredFreePointCoords = []
         for i in self.freePointIdx:
             pointLocation = Point(0.9999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],0.9999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])        
-            if self.slicedVisPoly.contains(pointLocation):
+            if not self.neighbour_visPolys[0].contains(pointLocation):
                 filteredFreePointCoords.append(pointLocation)
 
         #TODO: Filter occlusion with raycasting
         filteredOcclusionArcs = []
-        print(f'occ vector points {self.occlusionArcs}')
+        #print(f'occ vector points {self.occlusionArcs}')
         for i in self.occlusionArcs:
             if i.checkTruncate(self.slicedVisPoly):
                 filteredOcclusionArcs.append(i)
-        print(f'filtered occ arcs {self.filteredOcclusionArcs}')
+        #print(f'filtered occ arcs {self.filteredOcclusionArcs}')
         self.filteredFreePointCoords = filteredFreePointCoords
         self.filteredOcclusionArcs = filteredOcclusionArcs
         return 
