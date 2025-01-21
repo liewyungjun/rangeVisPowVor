@@ -4,13 +4,13 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/festo/robotino3/protos/Robotino3.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/solids/protos/SolidBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/advertising_board/protos/AdvertisingBoard.proto"
 
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.6482710606100678 0.03814497786215351 0.7604535440376312 3.2682087398809254
-  position 1.2540356060472502 0.7316475325765346 11.435926809885336
+  orientation -0.6727518645830576 0.016117558675876078 0.7396926071026727 3.314854005456389
+  position 1.0721017613110748 1.8792537148746777 18.695711727093745
 }
 TexturedBackground {
 }
@@ -22,15 +22,20 @@ RectangleArena {
   wallHeight 1
 }
 DEF ROBOTINO Robotino3 {
-  hidden position_0_0 4.5749956865908403e-08
-  hidden position_0_1 -7.47883124001501e-08
-  hidden position_0_2 7.477942554951755e-08
-  hidden rotation_1 0 1 0 4.2146848510894035e-08
-  hidden rotation_2 0 -1 0 7.300048299977715e-08
-  hidden rotation_3 0 1 0 7.300048299977715e-08
-  translation -1.8384195452477707 6.4490164004785925e-09 -0.0022915304429357575
-  rotation -0.012443271255019745 -0.9999225136059261 -0.00036302132229488473 1.1713171450265319e-05
-  controller "supervisor_controller"
+  hidden position_0_0 4.583319059601897e-08
+  hidden position_0_1 -7.474582181098701e-08
+  hidden position_0_2 7.473872705023937e-08
+  hidden linearVelocity_0 4.644447027756634e-13 -5.738513670263018e-15 -1.3614860476241022e-08
+  hidden angularVelocity_0 -5.995879619060653e-14 -4.93617848323102e-12 -2.7918196882302093e-16
+  hidden linearVelocity_1 7.540772493884984e-14 8.608650525304284e-15 1.2275691182135007e-07
+  hidden angularVelocity_1 -6.071075332050821e-14 -5.0649914846931115e-12 6.162728883578049e-16
+  hidden linearVelocity_2 -5.092248985275137e-13 -3.3773908006983163e-13 1.226760541044433e-07
+  hidden angularVelocity_2 -9.690613612028388e-14 -5.0053552943599e-12 5.888853939014655e-17
+  hidden linearVelocity_3 -5.17487116449096e-13 3.408042677371816e-13 1.226772068890673e-07
+  hidden angularVelocity_3 -2.5999899677230355e-14 -5.0063992836926615e-12 -2.994242301825752e-16
+  translation -1.0984200000026427 3.303112037530226e-09 -0.002291530959745519
+  rotation -0.012443252594630427 -0.9999225138381953 -0.0003630211709963493 1.1713174536023713e-05
+  controller "my_controller"
   supervisor TRUE
   topSlot [
     Lidar {
@@ -42,7 +47,7 @@ DEF ROBOTINO Robotino3 {
     }
   ]
 }
-SolidBox {
-  translation 0 0.81 0.56
-  size 1 1 1
+AdvertisingBoard {
+  translation -1.07 2.97 0
+  frameThickness 0.1
 }

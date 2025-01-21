@@ -32,7 +32,7 @@ v_x, v_y, omega = 0.0, 0.0, 0.0
 while robot.step(time_step) != -1:
     # Read keyboard inputs
     range_image=lidar.getRangeImage()
-#    print(len(range_image))
+    print("--------------------")
     print("{}".format(range_image))
     v_x, v_y, omega = 0.0, 0.0, 0.0  # Stop when no key is pressed
 

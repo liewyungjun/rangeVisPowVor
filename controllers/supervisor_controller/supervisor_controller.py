@@ -17,5 +17,5 @@ while robot.step(TIME_STEP) != -1:
   # [CODE PLACEHOLDER 2]
   if i == 0:
       new_value = [2.5, 0, 0]
-      translation_field.setSFVec3f(new_value)
+#      translation_field.setSFVec3f(new_value)
   i += 1
