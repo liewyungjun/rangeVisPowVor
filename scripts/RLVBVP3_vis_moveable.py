@@ -1,40 +1,50 @@
-
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from shapely import LineString
+import sys
+import os
+# adding Folder_2 to the system path
+sys.path.insert(0, os.path.expanduser('~/Documents/flush/controllers/supervisor_controller'))
 import RLVBVP3
-
+lidar_path=os.path.join(os.path.dirname(sys.path[0]), 'webots.txt')
 class RLVBVP_Interactive_Vis:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
-        self.coords = [[2.2,0.0]]
+        self.coords = [[]]
         self.agent = RLVBVP3.RLVBVP3(pos=[0.0,0.0],comms_radius=6.0,
-                      reading_radius=3.0,resolution=540,lidar_path='lidar_reading.txt')
-        self.clickNeighbour = []
+                      reading_radius=3.0,resolution=540,lidar_path=lidar_path)
+        #self.clickNeighbour = []
         # Connect mouse events
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
         self.agentStep()
         self.plotAll()
+        self.occ_length = 1
         
     def on_click(self, event):
         if event.inaxes != self.ax or event.button !=3:
             return
         self.coords = [[event.xdata, event.ydata]]
-        self.clickNeighbour = RLVBVP3.RLVBVP3(pos=[event.xdata, event.ydata],comms_radius=6.0,
-                      reading_radius=3.0,resolution=540)
+        #self.clickNeighbour = RLVBVP3.RLVBVP3(pos=[event.xdata, event.ydata],comms_radius=6.0,
+        #              reading_radius=3.0,resolution=540,lidar_path=lidar_path)
+        #start_step = time.time()
         self.agentStep()
+        #end_step = time.time()
+        #print(f"Time taken for agent step: {end_step - start_step:.6f} seconds")
 
         self.plotAll() # Clear and redraw
         
         plt.draw()
 
     def agentStep(self):
-        self.agent.read_lidar_data() #read lidar data from file into self.readings
-        self.agent.read_neighbors([self.clickNeighbour]) #update self.neighbour_coords
+        self.agent.read_lidar_data(path='/home/dlserver/Documents/flush/controllers/supervisor_controller/webots.txt') #read lidar data from file into self.readings
+        print(f'read in: {self.agent.readings}')
+        #self.agent.get_lidar_data([3.0,3.0,3.0,3.0])
+        self.agent.read_neighbors(self.coords) #update self.neighbour_coords
         self.agent.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
         self.agent.visibilityPartitioning()
-        self.agent.control_law() #find contrl law  components
+        self.occ_length = self.agent.control_law() #find contrl law  components
 
     def plotAll(self):
 
@@ -48,7 +58,7 @@ class RLVBVP_Interactive_Vis:
 
 
         self.ax.scatter(self.agent.pos[0], self.agent.pos[1], label='Drone 1')
-        self.ax.scatter(self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1], label='Drone 2')
+        
         
         sampledPoints = self.agent.freePointCoords[::3]
         first = True
@@ -68,30 +78,35 @@ class RLVBVP_Interactive_Vis:
             x,y, = self.agent.obstacleLines[i].xy
             plt.plot(x,y,'m-', linewidth=2, label='obstacle Line' if i == 0 else "")
 
-        # Calculate midpoint
-        midpoint_x = (self.agent.pos[0] + self.agent.neighbour_coords[0][0]) / 2
-        midpoint_y = (self.agent.pos[1] + self.agent.neighbour_coords[0][1]) / 2
+        if self.agent.neighbour_coords:
+            self.ax.scatter(self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1], label='Drone 2')
+            circle = plt.Circle((self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1]), 
+                                            self.agent.reading_radius, fill=False, linestyle='--', color='gray', label='Sensing Radius')
+            self.ax. add_patch(circle)
+            # Calculate midpoint
+            midpoint_x = (self.agent.pos[0] + self.agent.neighbour_coords[0][0]) / 2
+            midpoint_y = (self.agent.pos[1] + self.agent.neighbour_coords[0][1]) / 2
 
-        # Calculate perpendicular slope (negative reciprocal)
-        dx = self.agent.neighbour_coords[0][0] - self.agent.pos[0]
-        dy = self.agent.neighbour_coords[0][1] - self.agent.pos[1]
-        perp_dx = -dy
-        perp_dy = dx
+            # Calculate perpendicular slope (negative reciprocal)
+            dx = self.agent.neighbour_coords[0][0] - self.agent.pos[0]
+            dy = self.agent.neighbour_coords[0][1] - self.agent.pos[1]
+            perp_dx = -dy
+            perp_dy = dx
 
-        # Normalize perpendicular vector and scale it
-        scale = 1.0  # Length of perpendicular line
-        length = np.sqrt(perp_dx**2 + perp_dy**2)
-        perp_dx = (perp_dx / length) * scale
-        perp_dy = (perp_dy / length) * scale
+            # Normalize perpendicular vector and scale it
+            scale = 1.0  # Length of perpendicular line
+            length = np.sqrt(perp_dx**2 + perp_dy**2)
+            perp_dx = (perp_dx / length) * scale
+            perp_dy = (perp_dy / length) * scale
 
-        # Create a line that extends far beyond the intersection
-        line_length = 100  # Make it long enough to cross the entire intersection
-        bisector_line = LineString([
-            (midpoint_x - perp_dx * line_length, midpoint_y - perp_dy * line_length),
-            (midpoint_x + perp_dx * line_length, midpoint_y + perp_dy * line_length)
-        ])
-        x,y = bisector_line.xy
-        plt.plot(x,y, 'g--', label='Perpendicular Bisector')
+            # Create a line that extends far beyond the intersection
+            line_length = 100  # Make it long enough to cross the entire intersection
+            bisector_line = LineString([
+                (midpoint_x - perp_dx * line_length, midpoint_y - perp_dy * line_length),
+                (midpoint_x + perp_dx * line_length, midpoint_y + perp_dy * line_length)
+            ])
+            x,y = bisector_line.xy
+            plt.plot(x,y, 'g--', label='Perpendicular Bisector')
 
         filtered_free_x = [p.x for p in self.agent.filteredFreePointCoords]
         filtered_free_y = [p.y for p in self.agent.filteredFreePointCoords]
@@ -125,6 +140,10 @@ class RLVBVP_Interactive_Vis:
         print(f'Free arcs component: {self.agent.freeArcsComponent}')
         print(f'Occlusion arcs component: {self.agent.occlusionArcsComponent}')
         print(f'Total component: {totalComp}')
+        print(f'Free arcs magnitude: {np.linalg.norm(self.agent.freeArcsComponent)}')
+        print(f'Occlusion arcs magnitude: {np.linalg.norm(self.agent.occlusionArcsComponent)}')
+        print(f'Free arcs magnitude to length ratio: {np.linalg.norm(self.agent.freeArcsComponent) / len(self.agent.filteredFreePointCoords)}')
+        print(f'Occlusion arcs magnitude to length ratio: {np.linalg.norm(self.agent.occlusionArcsComponent) / self.occ_length}')
         print("---------------------------------")
 
         self.ax.legend(loc='lower right')
