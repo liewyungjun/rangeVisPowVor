@@ -1,3 +1,4 @@
 .vscode
 /scripts/__pycache__
 /scripts/test.py
+scripts/test.py
