@@ -1,4 +1,9 @@
 from controller import Robot, Keyboard
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+from RLVBVP3 import RLVBVP3
+
 import math
 
 # Initialize the robot and keyboard
