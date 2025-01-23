@@ -38,6 +38,7 @@ class OcclusionArc:
 class RLVBVP3:
     def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt',id=0):
         self.pos = pos
+        self.id = id
         self.comms_radius = comms_radius
         self.reading_radius = reading_radius
         self.resolution = resolution
@@ -60,7 +61,7 @@ class RLVBVP3:
         this_dir, this_filename = os.path.split(__file__)
         self.myfile = os.path.join(this_dir, lidar_path) 
 
-    def read_lidar_data(self,path = None):
+    def read_lidar_data(self,path = None): #read from filepath
         if not path:
             filepath = self.myfile
         else:
@@ -89,7 +90,7 @@ class RLVBVP3:
             self.logger.info("Error: lidar_reading.txt not found")
             return
         
-    def get_lidar_data(self, readings):
+    def get_lidar_data(self, readings): #read from direct array
         readings_temp = [0.0 for i in range(self.resolution)]
         for i in range(len(readings)):
             if readings[i] == float('inf'):        
@@ -101,7 +102,7 @@ class RLVBVP3:
                                  self.readings[i]*np.sin(self.angles[i])+self.pos[1]] 
                                  for i in range(len(self.readings))])
         self.reading_coords = reading_coords
-        print(f"read in {len(readings)}")
+        #print(f"read in {len(readings)}")
         #print(self.reading_coords)
         return
     
@@ -189,47 +190,51 @@ class RLVBVP3:
         for i in self.freePointCoords:
             point = Point(i[0], i[1])
             dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
-            neighbourPoint = Point(self.neighbour_coords[0][0], self.neighbour_coords[0][1])
-            dist_to_neighbor = neighbourPoint.distance(point)
-            if dist_to_neighbor < dist_to_self:
-                line = LineString([point,neighbourPoint])
-                clear = True
-                for j in self.obstacleLines: #and occlusion lines?
-                    if line.intersects(j):
-                        clear = False
+            neighbourCanSee = False
+            for j in self.neighbour_coords:
+                neighbourPoint = Point(j[0], j[1])
+                dist_to_neighbor = neighbourPoint.distance(point)
+                if dist_to_neighbor < dist_to_self:
+                    line = LineString([point,neighbourPoint])
+                    clear = True
+                    for k in self.obstacleLines: #and occlusion lines?
+                        if line.intersects(k):
+                            clear = False 
+                            break #this free point cannot be seen by this neighbour
+                    if clear:
+                        neighbourCanSee = True
                         break
-                if not clear:
-                    filteredFreePointCoords.append(point)
-            else:
+            if not neighbourCanSee:
                 filteredFreePointCoords.append(point)
-        self.filteredFreePointCoords = filteredFreePointCoords
+
+        self.filteredFreePointCoords = filteredFreePointCoords[:]
 
         
         for i in self.occlusionArcs:
             for j in i.interpolated_points:
                 point = Point(j[0], j[1])
                 dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
-                neighbourPoint = Point(self.neighbour_coords[0][0], self.neighbour_coords[0][1])
-                dist_to_neighbor = neighbourPoint.distance(point)
-                line = LineString([point,neighbourPoint])
-                clear = True
-                for j in self.obstacleLines: #and occlusion lines?
-                    if line.intersects(j):
-                        clear = False
-                        break
-                within_range = True if dist_to_neighbor < self.reading_radius else False
-                if dist_to_neighbor < dist_to_self:
-                    if not clear:
-                        i.filtered_points.append(point)
-                        #filteredOcclusionCoords.append(point)
-                else:
-                    if not clear or not within_range:
-                        i.filtered_points.append(point)
-                    #filteredOcclusionCoords.append(point)
+                neighbourCanCover = False
+                for k in self.neighbour_coords:
+                    neighbourPoint = Point(k[0], k[1])
+                    dist_to_neighbor = neighbourPoint.distance(point)
+                    line = LineString([point,neighbourPoint])
+                    clear = True
+                    for l in self.obstacleLines: #and occlusion lines?
+                        if line.intersects(l):
+                            clear = False
+                            break
+                    within_range = True if dist_to_neighbor < self.reading_radius else False
+                    if dist_to_neighbor < dist_to_self:
+                        if clear:
+                            neighbourCanCover = True
+                    else:
+                        if clear and within_range:
+                            neighbourCanCover = True
+                if not neighbourCanCover:
+                    i.filtered_points.append(point)
             if len(i.filtered_points)>2:
                 i.filteredLineString = LineString(i.filtered_points)
-        #self.filteredOcclusionCoords = filteredOcclusionCoords
-
         return
 
     def control_law(self):
@@ -242,7 +247,7 @@ class RLVBVP3:
             if norm > 0:
                 unit_vector = direction / norm
                 freeArcsComponentArr += unit_vector
-        print(f'free length: {len(self.filteredFreePointCoords)}')
+        #print(f'free length: {len(self.filteredFreePointCoords)}')
         self.freeArcsComponent = freeArcsComponentArr
 
         occ_length = 0
@@ -284,19 +289,20 @@ class RLVBVP3:
                 #print(f'temp component: {normal} * {math.pow(np.linalg.norm(pb-pa),2)} / {(np.linalg.norm(pr-self.pos) * densityComponent)}')
                 #print(f'adding temp occ component: {tempComponent}')
                 occlusionArcsComponentArr += tempComponent * readingPerUnitLength
-        print(f'occ length: {occ_length}')
+        #print(f'occ length: {occ_length}')
         self.occlusionArcsComponent = occlusionArcsComponentArr
         return occ_length
     
 
-    def move(self,timestep):
+    def move(self,timestep,log = False):
         self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
-        movement_step = self.velocity * timestep/100000
+        movement_step = self.velocity * timestep/10000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
         
         #self.readPos()
         self.pos +=movement_step
-        self.writeReadings()
+        if log:
+            self.writeReadings()
     
     def readPos(self,positionReading):
         if positionReading:
@@ -304,7 +310,7 @@ class RLVBVP3:
             self.pos[1] = positionReading[1]
 
     def writeReadings(self):
-        with open('webots.txt', 'w') as f:
+        with open(f'webots{self.id}.txt', 'w') as f:
                     f.truncate(0)
                     f.write('[')
                     for reading in self.readings[:-1]:

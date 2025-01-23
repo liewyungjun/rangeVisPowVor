@@ -3,18 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from shapely import LineString
-import sys
-import os
-# adding Folder_2 to the system path
-sys.path.insert(0, os.path.expanduser('~/Documents/flush/controllers/supervisor_controller'))
 import RLVBVP3
-lidar_path=os.path.join(os.path.dirname(sys.path[0]), 'webots.txt')
+#NOTE: that this tool only allows showing and interacting with 
+#current sensing. This cannot show the current neighbours and partitioning in
+#the simulation
+
+target_id = 1
+filepath=f'/home/dlserver/Documents/flush/controllers/supervisor_controller/webots{target_id}.txt'
+#filepath = 'lidar_reading.txt'
 class RLVBVP_Interactive_Vis:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
         self.coords = [[]]
         self.agent = RLVBVP3.RLVBVP3(pos=[0.0,0.0],comms_radius=6.0,
-                      reading_radius=3.0,resolution=540,lidar_path=lidar_path)
+                      reading_radius=3.0,resolution=540,lidar_path=filepath)
         #self.clickNeighbour = []
         # Connect mouse events
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
@@ -38,9 +40,14 @@ class RLVBVP_Interactive_Vis:
         plt.draw()
 
     def agentStep(self):
-        self.agent.read_lidar_data(path='/home/dlserver/Documents/flush/controllers/supervisor_controller/webots.txt') #read lidar data from file into self.readings
+        if filepath[0] == '/':
+            self.agent.read_lidar_data(path=filepath) #read lidar data from file into self.readings
+        else:
+            self.agent.read_lidar_data()
+        
         print(f'read in: {self.agent.readings}')
         #self.agent.get_lidar_data([3.0,3.0,3.0,3.0])
+        
         self.agent.read_neighbors(self.coords) #update self.neighbour_coords
         self.agent.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
         self.agent.visibilityPartitioning()
