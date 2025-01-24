@@ -9,26 +9,82 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.5246130231067521 -0.02258569074568414 0.8510411638459885 3.485658921281969
-  position 11.220882360660957 6.887503102239879 25.062496232278612
+  orientation -0.48515245021372244 -0.040545243314174306 0.8734890859628504 3.58260147490517
+  position 21.72506318935563 14.514560397581649 33.29720333326148
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
 RectangleArena {
-  floorSize 10 10
+  floorSize 20 20
   floorTileSize 0.8 0.8
   wallHeight 1
 }
 AdvertisingBoard {
-  translation -3.31 2.71 0
+  translation -7.14 6.22 0
   rotation 0 0 1 1.5708
   displayWidth 6
   frameThickness 0.1
 }
+AdvertisingBoard {
+  translation -2.21 6.22 0
+  rotation 0 0 1 1.5708
+  name "advertising board(1)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation 0.69 3.34004 0
+  rotation 0 0 -1 -5.307179586466759e-06
+  name "advertising board(2)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation 4.96 3.34004 0
+  rotation 0 0 -1 -5.307179586466759e-06
+  name "advertising board(3)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation 0.690014 -1.40996 0
+  rotation 0 0 -1 -5.307179586466759e-06
+  name "advertising board(4)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation 7.89 6.33004 0
+  rotation 0 0 1 1.5708
+  name "advertising board(5)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation 7.89 0.73004 0
+  rotation 0 0 1 1.5708
+  name "advertising board(6)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation -2.28 -4.44997 0
+  rotation 0 0 1 1.5708
+  name "advertising board(7)"
+  displayWidth 6
+  frameThickness 0.1
+}
+AdvertisingBoard {
+  translation -7.29 -4.44997 0
+  rotation 0 0 1 1.5708
+  name "advertising board(8)"
+  displayWidth 6
+  frameThickness 0.1
+}
 DEF ROBOT0 Robotino3 {
-  translation -4.17 3.68 0.1
+  translation -8.85 7.54 0.1
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "0"
   controller "supervisor_controller"
@@ -54,9 +110,61 @@ DEF ROBOT0 Robotino3 {
   ]
 }
 DEF ROBOT0 Robotino3 {
-  translation -2.19 3.68 0.2
+  translation -8.6 8.92 0.2
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "1"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  translation -6.76 7.28 0.3
+  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
+  name "2"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  translation -6.68 8.8 0.4
+  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
+  name "3"
   controller "supervisor_controller"
   supervisor TRUE
   topSlot [
