@@ -296,7 +296,7 @@ class RLVBVP3:
 
     def move(self,timestep,log = False):
         self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
-        movement_step = self.velocity * timestep/10000
+        movement_step = self.velocity * timestep/25000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
         
         #self.readPos()
@@ -317,3 +317,11 @@ class RLVBVP3:
                         f.write(f"{reading}, ")
                     f.write(f"{self.readings[-1]}")   
                     f.write(']')
+        with open(f'webots_coords_{self.id}.tmp', 'w') as f:
+                    f.truncate(0)
+                    f.write('[')
+                    for reading in self.reading_coords[:-1]:
+                        f.write(f"{reading}, ")
+                    f.write(f"{self.reading_coords[-1]}")   
+                    f.write(']')
+        os.replace(f'webots_coords_{self.id}.tmp',f'webots_coords_{self.id}.txt')
