@@ -31,9 +31,7 @@ class OcclusionArc:
             #self.interpolated_arc = LineString(interpolated_points)
         self.filtered_points = []
         self.filteredLineString = None
-        
-        
-            
+                 
 #Range-Limited Visbility-Based Voronoi Partitioning 
 class RLVBVP3:
     def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt',id=0):
@@ -50,9 +48,13 @@ class RLVBVP3:
         self.occlusionArcs = [] 
 
         self.neighbour_coords = []
+        self.virtual_neighbour_coords = []
+        self.movement_counter = 0
 
         self.filteredFreePointCoords=[] #list of Points
-        #self.filteredOcclusionCoords=[]
+        self.traj = [pos]
+        self.backtrack = False
+        self.backtrackPoints = []
 
         self.freeArcsComponent = [0.0,0.0]
         self.occlusionArcsComponent = [0.0,0.0]
@@ -169,29 +171,26 @@ class RLVBVP3:
     ################################################################################################
     def visibilityPartitioning(self):
         #raycast every point in self.reading_coords
-        #TODO: do this for multiple neighbours i.e. hardcoded self.neighbour_coords[0]
-        #TODO: relative point positioning
         filteredFreePointCoords = []
-        #filteredOcclusionCoords = []
-
-        if not self.neighbour_coords: # no neighbours
+        totalNeighbours = self.neighbour_coords + self.virtual_neighbour_coords  + self.backtrackPoints
+        
+        if not totalNeighbours: # no neighbours
             filteredFreePointCoords = [Point(i[0], i[1]) for i in self.freePointCoords]
             self.filteredFreePointCoords = filteredFreePointCoords
             for i in self.occlusionArcs:
                 for j in i.interpolated_points:
                     point = Point(j[0], j[1])
                     i.filtered_points.append(point)
-                #filteredOcclusionCoords.append(point)
                 if len(i.filtered_points)>2:
                     i.filteredLineString = LineString(i.filtered_points)
-            #self.filteredOcclusionCoords = filteredOcclusionCoords
+            #print(f'{self.id}: No Neighbours!')
             return 
         
         for i in self.freePointCoords:
             point = Point(i[0], i[1])
             dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
             neighbourCanSee = False
-            for j in self.neighbour_coords:
+            for j in totalNeighbours:
                 neighbourPoint = Point(j[0], j[1])
                 dist_to_neighbor = neighbourPoint.distance(point)
                 if dist_to_neighbor < dist_to_self:
@@ -206,6 +205,10 @@ class RLVBVP3:
                         break
             if not neighbourCanSee:
                 filteredFreePointCoords.append(point)
+        # if self.virtual_neighbour_coords:
+        #     print(f'{self.id}: filtered free points after virtual neighbour {filteredFreePointCoords}')
+        # else:
+        #     print(f'{self.id}: filtered free points before virtual neighbour {filteredFreePointCoords}')
 
         self.filteredFreePointCoords = filteredFreePointCoords[:]
 
@@ -215,7 +218,7 @@ class RLVBVP3:
                 point = Point(j[0], j[1])
                 dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
                 neighbourCanCover = False
-                for k in self.neighbour_coords:
+                for k in totalNeighbours:
                     neighbourPoint = Point(k[0], k[1])
                     dist_to_neighbor = neighbourPoint.distance(point)
                     line = LineString([point,neighbourPoint])
@@ -298,9 +301,58 @@ class RLVBVP3:
         self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
         movement_step = self.velocity * timestep/25000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
-        
-        #self.readPos()
         self.pos +=movement_step
+        
+        if np.linalg.norm(movement_step) > 0.01:
+            self.movement_counter = 0
+        else:
+            self.movement_counter +=1
+        
+        if self.movement_counter > 50:
+            print(f'{self.id}:ADD virtual neighbour')
+            if not self.backtrack:
+                print(f'{self.id}:push forward')
+                if len(self.traj) > 0:
+                    prev_pos = np.array(self.traj[-1])
+                    current_pos = np.array(self.pos)
+                    direction = current_pos - prev_pos
+                    if np.linalg.norm(direction) > 0:
+                        unit_vector = direction / np.linalg.norm(direction)
+                        if not self.filteredFreePointCoords: #no free points: backtrack
+                            self.backtrack = True
+                            virtual_point = self.pos + unit_vector * 0.1 # go opposite way
+                            self.backtrackPoints = [[virtual_point[0], virtual_point[1]]]
+                            self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
+                        else:
+                            virtual_point = self.pos - unit_vector * 0.1
+                            self.virtual_neighbour_coords.append([virtual_point[0], virtual_point[1]])
+            else:
+                print(f'{self.id}:backtracking')
+                if self.filteredFreePointCoords:
+                    self.backtrack = False
+                    self.virtual_neighbour_coords.append(self.backtrackPoints.copy())
+                    self.backtrackPoints = []
+                else:
+                    prev_pos = np.array(self.traj[-1])
+                    current_pos = np.array(self.pos)
+                    direction = current_pos - prev_pos
+                    if np.linalg.norm(direction) > 0:
+                        unit_vector = direction / np.linalg.norm(direction)
+                        virtual_point = self.pos - unit_vector * 0.1 
+                        self.backtrackPoints.append([virtual_point[0], virtual_point[1]])
+                        self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
+
+                            
+            #self.virtual_neighbour_coords.append([self.pos[0]-0.1,self.pos[1]])
+            self.movement_counter = 0
+
+        if len(self.traj) == 0 or np.linalg.norm(np.array(self.pos) - np.array(self.traj[-1])) > 0.5:
+                    self.traj.append([self.pos[0],self.pos[1]])
+                    if len(self.traj) > 20:  # Keep only last 20 points
+                        self.traj = self.traj[-20:]
+                    #print(self.traj)
+        
+
         if log:
             self.writeReadings()
     
