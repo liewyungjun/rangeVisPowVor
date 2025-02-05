@@ -38,7 +38,7 @@ def read_coords(filepath):
                 
         return coords
     except FileNotFoundError:
-        logging.error(f"Error: File {filepath} not found at {full_path}")
+        print(f"Error: File {filepath} not found at {full_path}")
         return None
 
     
