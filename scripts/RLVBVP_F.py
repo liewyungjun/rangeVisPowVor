@@ -8,12 +8,38 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+
+RESOLUTION = 90
+
+class OcclusionArc:
+    def __init__(self,pos,point1,point2,spacing):
+        self.point1 = point1
+        self.point2 = point2
+        self.reflex =  point1 if np.linalg.norm(np.array([point1.x, point1.y]) - np.array(pos)) \
+                        < np.linalg.norm(np.array([point2.x, point2.y]) - np.array(pos)) else point2        
+        self.occlusionArc = LineString([point1,point2])
+        self.length = self.occlusionArc.length
+        # Calculate linear distance between consecutive points
+        point1_coords = np.array([point1.x, point1.y])
+        point2_coords = np.array([point2.x, point2.y])
+        self.linear_distance = np.linalg.norm(point2_coords - point1_coords)
+        
+        num_points = int(self.linear_distance / spacing)  # 0.1m spacing
+        if num_points > 1:
+            t = np.linspace(0, 1, num_points)
+            self.interpolated_points = np.array([(1-t_)*point1_coords + t_*point2_coords for t_ in t])
+            #self.interpolated_arc = LineString(interpolated_points)
+        self.filtered_points = []
+        self.filteredLineString = None
+        
+        
             
 #Range-Limited Visbility-Based Voronoi Partitioning 
 class RLVBVP_F:
     def __init__(self, pos, comms_radius,reading_radius,resolution,
-                 lidar_path = 'lidar_reading2.txt',id=0,fov=60):
+                 lidar_path = 'lidar_reading2.txt',id=0,fov=60,ori=0.0):
         self.pos = pos
+        self.ori = ori
         self.id = id
         self.comms_radius = comms_radius
         self.reading_radius = reading_radius
@@ -22,9 +48,24 @@ class RLVBVP_F:
         angle_start = 0.5*np.pi + ((fov/2)/360)*2*np.pi
         angle_end = 0.5*np.pi - ((fov/2)/360)*2*np.pi
         self.angles = np.linspace(angle_start, angle_end, resolution)
+        
         self.reading_coords = []
+        self.fov_in_radians = fov/360 * 2 * np.pi
+        self.fov = fov
+        self.readingPerUnitLength = resolution / (reading_radius * (self.fov_in_radians))
+
+        self.freePointCoords = [] #list of 2d arr
+        self.occlusionArcs = [] 
+        self.coneCoords = []
 
         self.neighbour_coords = []
+
+        self.filteredFreePointCoords=[] #list of Points
+        #self.filteredOcclusionCoords=[]
+
+        self.freeArcsComponent = [0.0,0.0]
+        self.occlusionArcsComponent = [0.0,0.0]
+        self.coneComponent = [0.0,0.0]
         
         self.visPoly = None
         self.avoidPolys = []
@@ -40,7 +81,7 @@ class RLVBVP_F:
         try:
             with open(filepath, 'r') as file:
                 # Read lines and convert to float, replacing 'inf' with max_range
-                readings = [0.0 for i in range(540)]
+                readings = [0.0 for i in range(self.resolution)]
                 for line in file:
                     temp = line[1:-1].split(", ")
                 for i in range(len(temp)):
@@ -58,7 +99,7 @@ class RLVBVP_F:
             return
 
         except FileNotFoundError:
-            self.logger.info("Error: lidar_reading.txt not found")
+            print("Error: lidar_reading.txt not found")
             return
         
     def get_lidar_data(self, readings): #read from direct array
@@ -73,8 +114,6 @@ class RLVBVP_F:
                                  self.readings[i]*np.sin(self.angles[i])+self.pos[1]] 
                                  for i in range(len(self.readings))])
         self.reading_coords = reading_coords
-        #print(f"read in {len(readings)}")
-        #print(self.reading_coords)
         return
     
     def read_neighbors(self,neighbours):
@@ -88,82 +127,281 @@ class RLVBVP_F:
         return
 
     def process_lidar_data(self):
-        #self.visPoly = Polygon(self.reading_coords + self.pos)
-        self.visPoly = Polygon(np.array([[self.reading_radius * np.cos(angle)  + self.pos[0],
-                                    self.reading_radius * np.sin(angle) + self.pos[1]]
-                                    for angle in self.angles]))
+        freePointCoord = []
+        occlusionCoord = []
+        coneCoords = []
+        posPoint = Point(self.pos[0],self.pos[1])
+        leftPoint = Point(self.reading_coords[0][0],self.reading_coords[0][1])
+        rightPoint = Point(self.reading_coords[-1][0],self.reading_coords[-1][1])
+        coneCoords.append(OcclusionArc(self.pos,posPoint,leftPoint,1/self.readingPerUnitLength))
+        coneCoords.append(OcclusionArc(self.pos,posPoint,rightPoint,1/self.readingPerUnitLength))
+        obstacleLines = []
+        temp = []
+
+        for i in range(len(self.readings)):
+            
+            if i !=0 and abs(self.readings[i] - self.readings[i-1]) > self.reading_radius * 0.05: #big enough jump for occlusion
+                p1 = Point(0.999*self.readings[i-1]*np.cos(self.angles[i-1])+self.pos[0],0.999*self.readings[i-1]*np.sin(self.angles[i-1])+self.pos[1])
+                p2 = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
+
+                try:
+                    occlusionCoord.append(OcclusionArc(self.pos,p1,p2,1/self.readingPerUnitLength))
+                except ValueError:
+                    print("Value error")
+                    print(self.pos)
+                    print(p1.xy)
+                    print(p2.xy)
+                    raise Exception
+                if temp:
+                    obstacleLines.append(temp)
+                    temp = []
+
+            if self.readings[i] >= self.reading_radius * 0.99: #no collision
+                freePointCoord.append(self.reading_coords[i])
+                if temp:
+                    obstacleLines.append(temp)
+                    temp = []
+            else: #collision
+                obsPoint = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],\
+                                 0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
+                temp.append(obsPoint)
+            
+        if temp:
+            obstacleLines.append(temp)
+        self.freePointCoords = freePointCoord
+        self.occlusionArcs = occlusionCoord
+        self.coneCoords = coneCoords
+        obstacleLinesObj  = []
+        for i in obstacleLines:
+            if len(i)>1:
+                lineObj = LineString(i)
+                obstacleLinesObj.append(lineObj)
+        self.obstacleLines = obstacleLinesObj
         return 
 
     ################################################################################################
     def visibilityPartitioning(self):
-        #partition with inferred neighbour cone
-        if self.neighbour_coords:
-            # Calculate midpoint
-            midpoint_x = (self.pos[0] + self.neighbour_coords[0][0]) / 2
-            midpoint_y = (self.pos[1] + self.neighbour_coords[0][1]) / 2
+        #raycast every point in self.reading_coords
+        #TODO: do this for multiple neighbours i.e. hardcoded self.neighbour_coords[0]
+        #TODO: relative point positioning
+        filteredFreePointCoords = []
+        #filteredOcclusionCoords = []
 
-            # Calculate perpendicular slope (negative reciprocal)
-            dx = self.neighbour_coords[0][0] - self.pos[0]
-            dy = self.neighbour_coords[0][1] - self.pos[1]
-            perp_dx = -dy
-            perp_dy = dx
+        if not self.neighbour_coords: # no neighbours
+            filteredFreePointCoords = [Point(i[0], i[1]) for i in self.freePointCoords]
+            self.filteredFreePointCoords = filteredFreePointCoords
 
-            # Normalize perpendicular vector and scale it
-            scale = 1.0  # Length of perpendicular line
-            length = np.sqrt(perp_dx**2 + perp_dy**2)
-            perp_dx = (perp_dx / length) * scale
-            perp_dy = (perp_dy / length) * scale
+            for i in self.occlusionArcs:
+                for j in i.interpolated_points:
+                    point = Point(j[0], j[1])
+                    i.filtered_points.append(point)
+                if len(i.filtered_points)>2:
+                    i.filteredLineString = LineString(i.filtered_points)
+            
+            for i in self.coneCoords:
+                for j in i.interpolated_points:
+                    point = Point(j[0], j[1])
+                    i.filtered_points.append(point)
+                if len(i.filtered_points)>2:
+                    i.filteredLineString = LineString(i.filtered_points)
+            return 
+        
+        for i in self.freePointCoords:
+            point = Point(i[0], i[1])
+            dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
+            neighbourCanSee = False
+            for j in self.neighbour_coords:
+                neighbourPoint = Point(j[0], j[1])
+                dist_to_neighbor = neighbourPoint.distance(point)
+                neighbourAngle = j[2]
+                # Calculate angle between point and neighbour
+                dx = point.x - neighbourPoint.x
+                dy = point.y - neighbourPoint.y
+                angle = math.atan2(dx, dy)
+                angle_diff = abs(angle - neighbourAngle)
+                if angle_diff > math.pi:
+                    angle_diff = 2*math.pi - angle_diff
+                if angle_diff > self.fov_in_radians/2:
+                    continue                
+                if dist_to_neighbor < dist_to_self: #TODO: add angle constraint
+                    line = LineString([point,neighbourPoint])
+                    clear = True
+                    for k in self.obstacleLines: #and occlusion lines?
+                        if line.intersects(k):
+                            clear = False 
+                            break #this free point cannot be seen by this neighbour
+                    if clear:
+                        neighbourCanSee = True
+                        break
+            if not neighbourCanSee:
+                filteredFreePointCoords.append(point)
 
-            # Create a line that extends far beyond the intersection
-            line_length = 100  # Make it long enough to cross the entire intersection
-            bisector_line = LineString([
-                (midpoint_x - perp_dx * line_length, midpoint_y - perp_dy * line_length),
-                (midpoint_x + perp_dx * line_length, midpoint_y + perp_dy * line_length)
-            ])
+        self.filteredFreePointCoords = filteredFreePointCoords[:]
 
-            neighbor_pos = Point(self.neighbour_coords[0])
-            neighbor_angle = math.atan2(neighbor_pos[1] - self.pos[1], neighbor_pos[0] - self.pos[0])
-            
-            # Generate neighbor cone points using same angles and reading radius
-            neighbor_coords = np.array([[self.reading_radius * np.cos(angle + neighbor_angle - np.pi/2) + neighbor_pos[0],
-                                    self.reading_radius * np.sin(angle + neighbor_angle - np.pi/2) + neighbor_pos[1]]
-                                    for angle in self.angles])
-            
-            neighbor_poly = Polygon(np.vstack([neighbor_coords, neighbor_pos]))
-            
-            # Find intersection between visibility polygons
-            intersection = self.visPoly.intersection(neighbor_poly)
-            
-            if not intersection.is_empty:
-                # Split intersection by bisector
-                split_parts = split(intersection, bisector_line)
-                
-                # Determine which part is further from self.pos
-                my_point = Point(self.pos)
-                distances = [part.distance(my_point) for part in split_parts.geoms]
-                further_part = split_parts.geoms[np.argmax(distances)]
-                
-                # Cut original visPoly by removing the further part
-                self.visPoly = self.visPoly.difference(further_part)
-                self.avoidPolys.append(further_part)
+        
+        for i in self.occlusionArcs:
+            for j in i.interpolated_points:
+                point = Point(j[0], j[1])
+                dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
+                neighbourCanCover = False
+                for k in self.neighbour_coords:
+                    neighbourPoint = Point(k[0], k[1])
+                    #TODO: continue only if neighbour angle constraint satisfied
+                    neighbourAngle = k[2]
+                    # Calculate angle between point and neighbour
+                    dx = point.x - neighbourPoint.x
+                    dy = point.y - neighbourPoint.y
+                    angle = math.atan2(dx, dy)
+                    angle_diff = abs(angle - neighbourAngle)
+                    if angle_diff > math.pi:
+                        angle_diff = 2*math.pi - angle_diff
+                    if angle_diff > self.fov_in_radians/2:
+                        continue 
+                    dist_to_neighbor = neighbourPoint.distance(point)
+                    line = LineString([point,neighbourPoint])
+                    clear = True
+                    for l in self.obstacleLines: #and occlusion lines?
+                        if line.intersects(l):
+                            clear = False
+                            break
+                    within_range = True if dist_to_neighbor < self.reading_radius else False
+                    if dist_to_neighbor < dist_to_self:
+                        if clear:
+                            neighbourCanCover = True
+                    else:
+                        if clear and within_range:
+                            neighbourCanCover = True
+                if not neighbourCanCover:
+                    i.filtered_points.append(point)
+            if len(i.filtered_points)>2:
+                i.filteredLineString = LineString(i.filtered_points)
+
+        for i in self.coneCoords:
+            for j in i.interpolated_points:
+                point = Point(j[0], j[1])
+                dist_to_self = Point(self.pos[0], self.pos[1]).distance(point)
+                neighbourCanCover = False
+                for k in self.neighbour_coords:
+                    neighbourPoint = Point(k[0], k[1])
+                    #TODO: continue only if neighbour angle constraint satisfied
+                    neighbourAngle = k[2]
+                    # Calculate angle between point and neighbour
+                    dx = point.x - neighbourPoint.x
+                    dy = point.y - neighbourPoint.y
+                    angle = math.atan2(dx, dy)
+                    angle_diff = abs(angle - neighbourAngle)
+                    if angle_diff > math.pi:
+                        angle_diff = 2*math.pi - angle_diff
+                    if angle_diff > self.fov_in_radians/2:
+                        continue 
+                    dist_to_neighbor = neighbourPoint.distance(point)
+                    line = LineString([point,neighbourPoint])
+                    clear = True
+                    for l in self.obstacleLines: #and occlusion lines?
+                        if line.intersects(l):
+                            clear = False
+                            break
+                    within_range = True if dist_to_neighbor < self.reading_radius else False
+                    if dist_to_neighbor < dist_to_self:
+                        if clear:
+                            neighbourCanCover = True
+                    else:
+                        if clear and within_range:
+                            neighbourCanCover = True
+                if not neighbourCanCover:
+                    i.filtered_points.append(point)
+            if len(i.filtered_points)>2:
+                i.filteredLineString = LineString(i.filtered_points)
         return
 
     def control_law(self):
-        #control law based on overlap area and centroids
-        component = np.zeros(2)
-        for i in self.avoidPolys:
-            avoidVector = np.array([self.pos[0] - i.centroid.x,self.pos[1] - i.centroid.y])
-            component +=avoidVector * i.area
-        return component
+        freeArcsComponentArr = np.zeros(2)
+        for i in self.filteredFreePointCoords:
+            # Calculate direction vector from robot to point
+            direction = np.array([i.x - self.pos[0], i.y - self.pos[1]])
+            # Normalize to unit vector
+            norm = np.linalg.norm(direction)
+            if norm > 0:
+                unit_vector = direction / norm
+                freeArcsComponentArr += unit_vector
+        #print(f'free length: {len(self.filteredFreePointCoords)}')
+        self.freeArcsComponent = freeArcsComponentArr
+
+        occ_length = 0
+        occlusionArcsComponentArr = np.array([0.0,0.0])
+        for i in self.occlusionArcs:
+            occlusionLine = i.filteredLineString
+            if len(i.filtered_points) > 2:
+                # Get coordinates of all points on the line
+                coords = np.array(occlusionLine.coords)
+                occ_length += len(coords)
+                # Find nearest and furthest points
+                distances = [Point(self.pos[0], self.pos[1]).distance(Point(x, y)) for x, y in coords]
+                nearest_idx = np.argmin(distances)
+                furthest_idx = np.argmax(distances)
+                #print(f'nearest: {nearest_idx}, furthest: {furthest_idx}')
+                
+                pa = coords[nearest_idx]
+                pb = coords[furthest_idx]
+                pr = np.array([i.reflex.x,i.reflex.y])
+                
+                # Calculate direction vector of the line
+                line_vector = coords[-1] - coords[0]
+                
+                # Calculate normal vector (rotate 90 degrees counterclockwise)
+                normal = np.array([-line_vector[1], line_vector[0]])
+                
+                # Normalize the normal vector
+                normal = normal / np.linalg.norm(normal)
+                
+                # Ensure normal points inward by checking if it points towards self.pos
+                center_to_line = np.array([self.pos[0], self.pos[1]]) - coords[0]
+                if np.dot(normal, center_to_line) < 0:
+                    normal = -normal
+                
+                densityComponent = (1-math.pow(np.linalg.norm(pa-pr)/np.linalg.norm(pb-pr),2))/2
+                #print(f'density component: {densityComponent}')
+                tempComponent = normal * math.pow(np.linalg.norm(pb-pr),2) / np.linalg.norm(pr-self.pos) * densityComponent
+                #print(f'temp component: {normal} * {math.pow(np.linalg.norm(pb-pa),2)} / {(np.linalg.norm(pr-self.pos) * densityComponent)}')
+                #print(f'adding temp occ component: {tempComponent}')
+                occlusionArcsComponentArr += tempComponent * self.readingPerUnitLength
+        #print(f'occ length: {occ_length}')
+        self.occlusionArcsComponent = occlusionArcsComponentArr
+
+        coneComponent = np.zeros(2)
+        for i in range(len(self.coneCoords)):
+            coneLine = self.coneCoords[i].filteredLineString
+            if len(self.coneCoords[i].filtered_points) > 2:
+                # Get coordinates of all points on the line
+                coords = np.array(coneLine.coords)
+                # Find nearest and furthest points
+                distances = [Point(self.pos[0], self.pos[1]).distance(Point(x, y)) for x, y in coords]
+                nearest_idx = np.argmin(distances)
+                furthest_idx = np.argmax(distances)
+                
+                # Calculate direction vector of the line
+                line_vector = coords[furthest_idx] - coords[nearest_idx]
+                #print(f'Line vector: {line_vector}')
+                if i == 0:
+                    normal = np.array([-line_vector[1], line_vector[0]])
+                    normal = normal / np.linalg.norm(normal)
+                else:
+                    normal = np.array([line_vector[1], -line_vector[0]])
+                    normal = normal / np.linalg.norm(normal)
+                    
+                #print(f'coneComponent += {normal} * {self.readingPerUnitLength}')
+                coneComponent += normal * self.readingPerUnitLength * np.linalg.norm(line_vector)
+        self.coneComponent = coneComponent
+        return occ_length
     
 
     def move(self,timestep,log = False):
-        self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
-        movement_step = self.velocity * timestep/25000
-        movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
+        # self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
+        # movement_step = self.velocity * (timestep/25000)
+        # movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
         
         #self.readPos()
-        self.pos +=movement_step
+        #self.pos +=movement_step
         if log:
             self.writeReadings()
     
