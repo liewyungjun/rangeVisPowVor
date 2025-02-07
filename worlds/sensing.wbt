@@ -9,8 +9,8 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.5248606053792348 -0.3014188639289625 0.7960326710561048 4.116640318610148
-  position 6.5172273986120235 24.616602120438454 40.671696517007845
+  orientation -0.36991083026284965 -0.3604242638845808 0.8563062113855693 4.707829050551778
+  position -8.02311581459719 17.557140670870858 9.694111625020788
 }
 TexturedBackground {
 }
@@ -217,7 +217,7 @@ DEF ROBOT0 Robotino3 {
   translation -7.66 8.62 0.09
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "5"
-  controller "<none>"
+  controller "supervisor_controller"
   supervisor TRUE
   topSlot [
     Lidar {
@@ -243,7 +243,7 @@ DEF ROBOT0 Robotino3 {
   translation -8.56 8.79 0.06
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "6"
-  controller "<none>"
+  controller "supervisor_controller"
   supervisor TRUE
   topSlot [
     Lidar {
