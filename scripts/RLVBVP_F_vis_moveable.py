@@ -12,12 +12,15 @@ import RLVBVP_F
 target_id = 0
 filepath=f'/home/dlserver/Documents/flush/controllers/fan_controller/webots{target_id}.txt'
 #filepath = 'lidar_reading.txt'
+my_loc = [6.0234337176745, -6.5800862187912745, -0.0035308634557531665, 3.141592653589793]
+neighbout_loc = [[5.36297, -6.4929553676205645, -0.016870331120894616, 3.141592653589793]]
 class RLVBVP_Interactive_Vis:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
-        self.coords = [[0.0,0.0,0.0]]
-        self.agent = RLVBVP_F.RLVBVP_F(pos=[0.0,0.0],comms_radius=6.0,
-                      reading_radius=3.0,resolution=90,lidar_path=filepath,fov=60)
+        self.coords =  [neighbout_loc[0][:2] + [neighbout_loc[0][-1]]]
+        print(self.coords)
+        self.agent = RLVBVP_F.RLVBVP_F(pos=my_loc[:2],comms_radius=6.0,
+                      reading_radius=3.0,resolution=90,lidar_path=filepath,fov=60,ori=my_loc[-1])
         #self.clickNeighbour = []
         # Connect mouse events
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
@@ -35,7 +38,7 @@ class RLVBVP_Interactive_Vis:
                 self.plotAll() # Clear and redraw
                 plt.draw()
             return
-        self.coords = [[event.xdata, event.ydata,0.0]]
+        self.coords = [[event.xdata, event.ydata,self.coords[0][2]]]
         self.agentStep()
         self.plotAll() # Clear and redraw
         plt.draw()
@@ -49,10 +52,15 @@ class RLVBVP_Interactive_Vis:
         #print(f'read in: {self.agent.readings}')
         #self.agent.get_lidar_data([3.0,3.0,3.0,3.0])
         
-        self.agent.read_neighbors([[self.coords[0][0],self.coords[0][1],self.coords[0][2]-0.5*np.pi]]) #update self.neighbour_coords
+        self.agent.read_neighbors([[self.coords[0][0],self.coords[0][1],self.coords[0][2]]]) #update self.neighbour_coords
         self.agent.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
         self.agent.visibilityPartitioning()
         self.occ_length = self.agent.control_law() #find contrl law  components
+        print(f'freeArcs: {self.agent.freeArcsComponent}')
+        print(f'occlusionArcs: {self.agent.occlusionArcsComponent}')
+        print(f'coneComponent: {self.agent.coneComponent}')
+        self.velocity =np.array(self.agent.freeArcsComponent) + np.array(self.agent.occlusionArcsComponent) + np.array(self.agent.coneComponent)
+        print(f'self.vel: {self.agent.velocity}')
 
     def plotAll(self):
 
@@ -95,14 +103,14 @@ class RLVBVP_Interactive_Vis:
                                             self.agent.reading_radius, fill=False, linestyle='--', color='gray',
                                             label='Sensing Radius')
             self.ax.add_patch(circle)
-            neighbour_angle = self.coords[0][2]/(2 * np.pi) * 360
+
+            angle_rad = self.agent.neighbour_coords[0][2]# Convert to radians and adjust for plotting
+            neighbour_angle = angle_rad/(2 * np.pi) * 360
             wedge = Wedge((self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1]), 
                           self.agent.reading_radius, neighbour_angle-self.agent.fov/2, 
                           neighbour_angle + self.agent.fov/2, facecolor='orange', alpha=0.5)
             self.ax.add_patch(wedge)
-
             # Plot unit vector showing neighbor's heading
-            angle_rad = self.agent.neighbour_coords[0][2]# Convert to radians and adjust for plotting
             dx = np.cos(angle_rad)
             dy = np.sin(angle_rad)
             plt.arrow(self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1], 
@@ -181,10 +189,10 @@ class RLVBVP_Interactive_Vis:
         # print(f'Occlusion arcs magnitude to length ratio: {np.linalg.norm(self.agent.occlusionArcsComponent) / self.occ_length}')
         # print("---------------------------------")
 
-        self.ax.legend(loc='lower right')
-        self.ax.set_xlim(-7, 7)
+        #self.ax.legend(loc='lower right')
+        self.ax.set_xlim(my_loc[0] - 6.0, my_loc[0] + 6.0)
         #self.ax.figure(figsize=(8,6))
-        self.ax.set_ylim(-5,5)
+        self.ax.set_ylim(my_loc[1] - 6.0, my_loc[1] + 6.0)
         self.ax.set_aspect('equal')
 
 if __name__ == "__main__":

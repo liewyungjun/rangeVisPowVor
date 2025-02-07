@@ -39,6 +39,7 @@ class RLVBVP_F:
     def __init__(self, pos, comms_radius,reading_radius,resolution,
                  lidar_path = 'lidar_reading2.txt',id=0,fov=60,ori=0.0):
         self.pos = pos
+        self.velocity = np.zeros(2)
         self.ori = ori
         self.id = id
         self.comms_radius = comms_radius
@@ -182,11 +183,7 @@ class RLVBVP_F:
     ################################################################################################
     def visibilityPartitioning(self):
         #raycast every point in self.reading_coords
-        #TODO: do this for multiple neighbours i.e. hardcoded self.neighbour_coords[0]
-        #TODO: relative point positioning
         filteredFreePointCoords = []
-        #filteredOcclusionCoords = []
-
         if not self.neighbour_coords: # no neighbours
             filteredFreePointCoords = [Point(i[0], i[1]) for i in self.freePointCoords]
             self.filteredFreePointCoords = filteredFreePointCoords
@@ -217,13 +214,13 @@ class RLVBVP_F:
                 # Calculate angle between point and neighbour
                 dx = point.x - neighbourPoint.x
                 dy = point.y - neighbourPoint.y
-                angle = math.atan2(dx, dy)
+                angle = math.atan2(dy, dx)
                 angle_diff = abs(angle - neighbourAngle)
                 if angle_diff > math.pi:
                     angle_diff = 2*math.pi - angle_diff
                 if angle_diff > self.fov_in_radians/2:
                     continue                
-                if dist_to_neighbor < dist_to_self: #TODO: add angle constraint
+                if dist_to_neighbor < dist_to_self: 
                     line = LineString([point,neighbourPoint])
                     clear = True
                     for k in self.obstacleLines: #and occlusion lines?
@@ -251,7 +248,7 @@ class RLVBVP_F:
                     # Calculate angle between point and neighbour
                     dx = point.x - neighbourPoint.x
                     dy = point.y - neighbourPoint.y
-                    angle = math.atan2(dx, dy)
+                    angle = math.atan2(dy, dx)
                     angle_diff = abs(angle - neighbourAngle)
                     if angle_diff > math.pi:
                         angle_diff = 2*math.pi - angle_diff
@@ -288,7 +285,7 @@ class RLVBVP_F:
                     # Calculate angle between point and neighbour
                     dx = point.x - neighbourPoint.x
                     dy = point.y - neighbourPoint.y
-                    angle = math.atan2(dx, dy)
+                    angle = math.atan2(dy, dx)
                     angle_diff = abs(angle - neighbourAngle)
                     if angle_diff > math.pi:
                         angle_diff = 2*math.pi - angle_diff
@@ -396,12 +393,17 @@ class RLVBVP_F:
     
 
     def move(self,timestep,log = False):
-        # self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
-        # movement_step = self.velocity * (timestep/25000)
-        # movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
-        
-        #self.readPos()
-        #self.pos +=movement_step
+        print(f'freeArcs: {self.freeArcsComponent}')
+        print(f'occlusionArcs: {self.occlusionArcsComponent}')
+        print(f'coneComponent: {self.coneComponent}')
+        self.velocity =np.array(self.freeArcsComponent) + np.array(self.occlusionArcsComponent) + np.array(self.coneComponent)
+        print(f'self.vel: {self.velocity}')
+        print(f' times: {(timestep/25000)}')
+        movement_step = self.velocity * (timestep/25000)
+
+        movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
+        print(f'movement step: {movement_step}')
+        self.pos +=movement_step
         if log:
             self.writeReadings()
     

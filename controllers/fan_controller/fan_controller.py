@@ -1,4 +1,6 @@
 import time
+
+import numpy as np
 from controller import Supervisor
 import sys
 import os
@@ -37,7 +39,7 @@ receiver = robot.getDevice('receiver')
 receiver.enable(TIME_STEP)
 
 robot_control = RLVBVP_F(pos=position[:-1],comms_radius=reading_radius*2,
-                         reading_radius=reading_radius,resolution=90,id=id,fov=60)
+                         reading_radius=reading_radius,resolution=90,id=id,fov=60,ori = 0.5 * np.pi)
 
 globalComms = []
 i = 0
@@ -45,8 +47,8 @@ while robot.step(TIME_STEP) != -1:
   
 
   range_image=lidar.getRangeImage()
-  print(range_image)
-  #print(f"{id}--------------------")
+  #print(range_image)
+  print(f"{id}--------------------")
 
   # Receive messages
   neighbourArr = []
@@ -66,10 +68,9 @@ while robot.step(TIME_STEP) != -1:
   #print("{}".format(range_image))
   robot_control.get_lidar_data(range_image)
 
-  #robot_control.read_neighbors(self.coords) #update self.neighbour_coords
-  #robot_control.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
-  #robot_control.visibilityPartitioning()
-  #occ_length = robot_control.control_law()
+  robot_control.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
+  robot_control.visibilityPartitioning()
+  occ_length = robot_control.control_law()
   robot_control.move(TIME_STEP,log=True)
   webots_position = translation_field.getSFVec3f()
   new_pos = [robot_control.pos[0],robot_control.pos[1],webots_position[-1]]
@@ -77,9 +78,11 @@ while robot.step(TIME_STEP) != -1:
   # print(f'Old Position: {webots_position}')
   # print(f'Velocity" {robot_control.velocity}')
   # print(f'New Position: {new_pos}')
-
+  msg = new_pos + [robot_control.ori]
   # Send position message
-  message = f"{new_pos}"
+  message = f"{msg}"
+  print(f'Send {message}')
+  print(f'{robot_control.id}: neighbour is at {robot_control.neighbour_coords}')
   emitter.send(message.encode('utf-8'))
 
   

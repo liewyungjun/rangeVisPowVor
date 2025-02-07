@@ -63,7 +63,6 @@ while robot.step(TIME_STEP) != -1:
 
   #print("{}".format(range_image))
   robot_control.get_lidar_data(range_image)
-  #robot_control.read_neighbors(self.coords) #update self.neighbour_coords
   robot_control.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
   robot_control.visibilityPartitioning()
   occ_length = robot_control.control_law()

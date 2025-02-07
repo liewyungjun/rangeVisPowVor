@@ -7,33 +7,42 @@ fov = 140
 
 def findY(fov):
     fov_in_radian = fov/360 * 2*np.pi
+    pointsPerUnitLength = 10
+    resolution = (fov_in_radian * radius) *pointsPerUnitLength
+    #pointsPerUnitLength = resolution/(fov_in_radian * radius)
+    
     angle_start = 0.5*np.pi + fov_in_radian/2
     angle_end = 0.5*np.pi - fov_in_radian/2
-    angles = np.linspace(angle_start, angle_end, resolution)
+    angles = np.linspace(angle_start, angle_end, int(resolution))
     reading_coords = np.array([[radius*np.cos(angles[i]),
                                     radius*np.sin(angles[i])]
                                     for i in range(len(angles))])
 
-    pointsPerUnitLength = resolution/(fov_in_radian * radius)
+    
     arcForce = np.zeros(2)
     for i in reading_coords:
-        arcForce += i
+        arcForce += i/np.linalg.norm(i)
 
     fovForce = np.zeros(2)
     #print(np.cos((np.pi-fov_in_radian)/2))
-    fovForce = 2 * radius * pointsPerUnitLength * np.cos((np.pi-fov_in_radian)/2) * 3
+    unit_vector = reading_coords[0] / np.linalg.norm(reading_coords[0])
+    normal_vector = [-unit_vector[1],unit_vector[0]]
+    
+    #fovForce = 2 * radius * pointsPerUnitLength * np.cos((np.pi-fov_in_radian)/2) * 3
+    fovForce = 2 * radius * pointsPerUnitLength * normal_vector[1]
     #print(f'arcForce: {arcForce}')
     #print(f'fovForce: {fovForce}')
     return arcForce[1],fovForce
 
 res = []
-for i in range(1,180):
+for i in range(10,180):
     res.append([findY(i)])
 #print(res)
 arc = [i[0][0] for i in res] 
 fovv = [i[0][1] for i in res] 
-fov_values = [i for i in range(1,180)]
+fov_values = [i for i in range(10,180)]
 plt.plot(fov_values, arc, 'r')
 plt.plot(fov_values, fovv, 'b')
+plt.plot(fov_values, [arc[i]+fovv[i] for i in range(len(res))], 'g')
 plt.show()
 #y = Σ (r * cos(0.5 * π + (f / 360) * π / 2 + i * ((0.5 * π - (f / 360) * π / 2) - (0.5 * π + (f0 / 360) * π / 2)) / (s - 1))) {0<i<s-1}
