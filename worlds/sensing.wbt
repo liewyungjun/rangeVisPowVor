@@ -9,8 +9,8 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.36991083026284965 -0.3604242638845808 0.8563062113855693 4.707829050551778
-  position -8.02311581459719 17.557140670870858 9.694111625020788
+  orientation -0.4474041551310907 -0.47824385505636424 0.7557197477056307 4.643038975519469
+  position -9.128662599376085 18.424868603903175 17.432996726987255
 }
 TexturedBackground {
 }
@@ -113,7 +113,7 @@ DEF ROBOT0 Robotino3 {
   translation -6.67 9.41 0.03
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "1"
-  controller "<none>"
+  controller "supervisor_controller"
   supervisor TRUE
   topSlot [
     Lidar {
@@ -139,7 +139,7 @@ DEF ROBOT0 Robotino3 {
   translation -5.41 8.64 0.02
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "2"
-  controller "<none>"
+  controller "supervisor_controller"
   supervisor TRUE
   topSlot [
     Lidar {
@@ -165,137 +165,7 @@ DEF ROBOT0 Robotino3 {
   translation -5.48 9.26 0.05
   rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
   name "3"
-  controller "<none>"
-  supervisor TRUE
-  topSlot [
-    Lidar {
-      translation 0 0 0.1
-      rotation 0 0 1 -1.5707953071795862
-      horizontalResolution 540
-      fieldOfView 6.28318
-      numberOfLayers 1
-      maxRange 3
-    }
-  ]
-  bodySlot [
-    Emitter {
-      range 6
-      channel 1
-    }
-    Receiver {
-      channel 1
-    }
-  ]
-}
-DEF ROBOT0 Robotino3 {
-  translation -7.62 9.36 0.07
-  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
-  name "4"
-  controller "<none>"
-  supervisor TRUE
-  topSlot [
-    Lidar {
-      translation 0 0 0.1
-      rotation 0 0 1 -1.5707953071795862
-      horizontalResolution 540
-      fieldOfView 6.28318
-      numberOfLayers 1
-      maxRange 3
-    }
-  ]
-  bodySlot [
-    Emitter {
-      range 6
-      channel 1
-    }
-    Receiver {
-      channel 1
-    }
-  ]
-}
-DEF ROBOT0 Robotino3 {
-  translation -7.66 8.62 0.09
-  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
-  name "5"
   controller "supervisor_controller"
-  supervisor TRUE
-  topSlot [
-    Lidar {
-      translation 0 0 0.1
-      rotation 0 0 1 -1.5707953071795862
-      horizontalResolution 540
-      fieldOfView 6.28318
-      numberOfLayers 1
-      maxRange 3
-    }
-  ]
-  bodySlot [
-    Emitter {
-      range 6
-      channel 1
-    }
-    Receiver {
-      channel 1
-    }
-  ]
-}
-DEF ROBOT0 Robotino3 {
-  translation -8.56 8.79 0.06
-  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
-  name "6"
-  controller "supervisor_controller"
-  supervisor TRUE
-  topSlot [
-    Lidar {
-      translation 0 0 0.1
-      rotation 0 0 1 -1.5707953071795862
-      horizontalResolution 540
-      fieldOfView 6.28318
-      numberOfLayers 1
-      maxRange 3
-    }
-  ]
-  bodySlot [
-    Emitter {
-      range 6
-      channel 1
-    }
-    Receiver {
-      channel 1
-    }
-  ]
-}
-DEF ROBOT0 Robotino3 {
-  translation -8.63 9.38 0.07
-  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
-  name "7"
-  controller "<none>"
-  supervisor TRUE
-  topSlot [
-    Lidar {
-      translation 0 0 0.1
-      rotation 0 0 1 -1.5707953071795862
-      horizontalResolution 540
-      fieldOfView 6.28318
-      numberOfLayers 1
-      maxRange 3
-    }
-  ]
-  bodySlot [
-    Emitter {
-      range 6
-      channel 1
-    }
-    Receiver {
-      channel 1
-    }
-  ]
-}
-DEF ROBOT0 Robotino3 {
-  translation -9.29 9.47 0.02
-  rotation 0.00043451671501187574 -2.3359001485947353e-06 -0.9999999055948795 9.635227911867826e-19
-  name "8"
-  controller "<none>"
   supervisor TRUE
   topSlot [
     Lidar {

@@ -46,17 +46,18 @@ def create_neighbor_marker(supervisor, position):
     marker = supervisor.getRoot().getField('children')
     marker.importMFNodeFromString(-1, '''
     DEF NEIGHBOR_MARKER Solid {
-        translation %f %f %f
-        children [
-            Shape {
-                appearance PBRAppearance {
-                    baseColor 1 0 0
-                }
-                geometry Sphere {
-                    radius 0.1
-                }
-            }
-        ]
+      translation %f %f %f
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 0
+            emissiveColor 1 1 0
+          }
+          geometry Sphere {
+            radius 0.4
+          }
+        }
+      ]
     }
     ''' % (position[0], position[1], position[2]))
 
@@ -93,14 +94,15 @@ while robot.step(TIME_STEP) != -1:
   translation_field.setSFVec3f(new_pos)
 
   # Check if virtual neighbors list has changed
-  current_virtual_neighbors = robot_control.virtual_neighbour_coords
-  if hasattr(robot_control, 'prev_virtual_neighbors'):
-    if current_virtual_neighbors != robot_control.prev_virtual_neighbors and len(current_virtual_neighbors) > 0:
-      create_neighbor_marker(robot, current_virtual_neighbors[-1] + [1.0])
-  else:
-      if len(current_virtual_neighbors) > 0:
+  if robot_control.id == "0":
+    current_virtual_neighbors = robot_control.virtual_neighbour_coords
+    if hasattr(robot_control, 'prev_virtual_neighbors'):
+      if current_virtual_neighbors != robot_control.prev_virtual_neighbors and len(current_virtual_neighbors) > 0:
         create_neighbor_marker(robot, current_virtual_neighbors[-1] + [1.0])
-  robot_control.prev_virtual_neighbors = current_virtual_neighbors.copy()
+    else:
+        if len(current_virtual_neighbors) > 0:
+          create_neighbor_marker(robot, current_virtual_neighbors[-1] + [1.0])
+    robot_control.prev_virtual_neighbors = current_virtual_neighbors.copy()
   # print(f'Old Position: {webots_position}')  # print(f'Velocity" {robot_control.velocity}')
   # print(f'New Position: {new_pos}')
 

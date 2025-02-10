@@ -302,58 +302,62 @@ class RLVBVP3:
         movement_step = self.velocity * timestep/25000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
         self.pos +=movement_step
-        virtual_gain = 0.5
-        if np.linalg.norm(movement_step) > 0.01:
-            self.movement_counter = 0
-        else:
-            self.movement_counter +=1
-        
-        if self.movement_counter > 50:
-            print(f'{self.id}:ADD virtual neighbour')
-            if not self.backtrack:
-                if len(self.traj) > 0:
-                    prev_pos = np.array(self.traj[-1])
-                    current_pos = np.array(self.pos)
-                    direction = current_pos - prev_pos
-                    if np.linalg.norm(direction) > 0:
-                        unit_vector = direction / np.linalg.norm(direction)
-                        if not self.filteredFreePointCoords: #no free points: backtrack
-                            print(f'{self.id}:transition to backtracking')
-                            self.backtrack = True
-                            virtual_point = self.pos + unit_vector * virtual_gain # go opposite way
-                            self.backtrackPoints = [[virtual_point[0], virtual_point[1]]]
-                            self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
-                        else:
+        if self.id == "0":
+            virtual_gain = 0.5
+            if np.linalg.norm(movement_step) > 0.05:
+                self.movement_counter = 0
+            else:
+                self.movement_counter +=1
+            
+            if self.movement_counter > 50:
+                print(f'{self.id}:ADD virtual neighbour')
+                if not self.backtrack:
+                    if len(self.traj) > 0:
+                        prev_pos = np.array(self.traj[-1])
+                        current_pos = np.array(self.pos)
+                        direction = current_pos - prev_pos
+                        if np.linalg.norm(direction) > 0:
+                            unit_vector = direction / np.linalg.norm(direction)
                             print(f'{self.id}:push forward')
                             virtual_point = self.pos - unit_vector * virtual_gain
                             self.virtual_neighbour_coords.append([virtual_point[0], virtual_point[1]])
-            else:
-                print(f'{self.id}:backtracking')
-                if self.filteredFreePointCoords:
-                    print(f'{self.id}:finished backtracking')
-                    self.backtrack = False
-                    self.virtual_neighbour_coords.append(self.backtrackPoints.copy())
-                    self.backtrackPoints = []
+                            # if not self.filteredFreePointCoords: #no free points: backtrack
+                            #     print(f'{self.id}:transition to backtracking')
+                            #     self.backtrack = True ## temp change
+                            #     virtual_point = self.pos + unit_vector * virtual_gain # go opposite way
+                            #     self.backtrackPoints = [[virtual_point[0], virtual_point[1]]]
+                            #     self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
+                            # else:
+                            #     print(f'{self.id}:push forward')
+                            #     virtual_point = self.pos - unit_vector * virtual_gain
+                            #     self.virtual_neighbour_coords.append([virtual_point[0], virtual_point[1]])
                 else:
-                    print(f'{self.id}:continue backtracking')
-                    prev_pos = np.array(self.traj[-1])
-                    current_pos = np.array(self.pos)
-                    direction = current_pos - prev_pos
-                    if np.linalg.norm(direction) > 0:
-                        unit_vector = direction / np.linalg.norm(direction)
-                        virtual_point = self.pos - unit_vector * virtual_gain 
-                        self.backtrackPoints.append([virtual_point[0], virtual_point[1]])
-                        self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
+                    print(f'{self.id}:backtracking')
+                    if self.filteredFreePointCoords:
+                        print(f'{self.id}:finished backtracking')
+                        self.backtrack = False
+                        self.virtual_neighbour_coords.append(self.backtrackPoints.copy())
+                        self.backtrackPoints = []
+                    else:
+                        print(f'{self.id}:continue backtracking')
+                        prev_pos = np.array(self.traj[-1])
+                        current_pos = np.array(self.pos)
+                        direction = current_pos - prev_pos
+                        if np.linalg.norm(direction) > 0:
+                            unit_vector = direction / np.linalg.norm(direction)
+                            virtual_point = self.pos - unit_vector * virtual_gain 
+                            self.backtrackPoints.append([virtual_point[0], virtual_point[1]])
+                            self.virtual_neighbour_coords = self.virtual_neighbour_coords[:-1] if len(self.virtual_neighbour_coords)>0 else []
 
-                            
-            #self.virtual_neighbour_coords.append([self.pos[0]-0.1,self.pos[1]])
-            self.movement_counter = 0
+                                
+                #self.virtual_neighbour_coords.append([self.pos[0]-0.1,self.pos[1]])
+                self.movement_counter = 0
 
-        if len(self.traj) == 0 or np.linalg.norm(np.array(self.pos) - np.array(self.traj[-1])) > 0.5:
-                    self.traj.append([self.pos[0],self.pos[1]])
-                    if len(self.traj) > 20:  # Keep only last 20 points
-                        self.traj = self.traj[-20:]
-                    #print(self.traj)
+            if len(self.traj) == 0 or np.linalg.norm(np.array(self.pos) - np.array(self.traj[-1])) > 0.5:
+                        self.traj.append([self.pos[0],self.pos[1]])
+                        if len(self.traj) > 20:  # Keep only last 20 points
+                            self.traj = self.traj[-20:]
+                        #print(self.traj)
         
 
         if log:
