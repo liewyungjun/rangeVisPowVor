@@ -15,7 +15,9 @@ TIME_STEP = 32
 robot = Supervisor()  # create Supervisor instance
 robotino_node = robot.getFromDef('ROBOT0')
 translation_field = robotino_node.getField('translation')
+rotation_field = robotino_node.getField('rotation')
 position = translation_field.getSFVec3f()
+translation = rotation_field.getSFRotation()
 id = robotino_node.getField('name').getSFString()
 # print(id)
 # print(f'Starting Pos: {position}')
@@ -39,7 +41,8 @@ receiver = robot.getDevice('receiver')
 receiver.enable(TIME_STEP)
 
 robot_control = RLVBVP_F(pos=position[:-1],comms_radius=reading_radius*2,
-                         reading_radius=reading_radius,resolution=90,id=id,fov=60,ori = 0.5 * np.pi)
+                         reading_radius=reading_radius,resolution=90,
+                         id=id,fov=60,ori = translation[3]-0.5 * np.pi)
 
 globalComms = []
 i = 0
@@ -48,7 +51,7 @@ while robot.step(TIME_STEP) != -1:
 
   range_image=lidar.getRangeImage()
   #print(range_image)
-  print(f"{id}--------------------")
+  # print(f"{id}--------------------")
 
   # Receive messages
   neighbourArr = []
@@ -71,18 +74,20 @@ while robot.step(TIME_STEP) != -1:
   robot_control.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
   robot_control.visibilityPartitioning()
   occ_length = robot_control.control_law()
-  robot_control.move(TIME_STEP,log=True)
+  robot_control.move(TIME_STEP,log=False)
   webots_position = translation_field.getSFVec3f()
   new_pos = [robot_control.pos[0],robot_control.pos[1],webots_position[-1]]
   translation_field.setSFVec3f(new_pos)
+  rotation_field.setSFRotation([0, 0, 1, robot_control.ori + 0.5 * np.pi])
+  
   # print(f'Old Position: {webots_position}')
   # print(f'Velocity" {robot_control.velocity}')
   # print(f'New Position: {new_pos}')
-  msg = new_pos + [robot_control.ori]
+  msg = new_pos[:2] + [robot_control.ori]
   # Send position message
   message = f"{msg}"
-  print(f'Send {message}')
-  print(f'{robot_control.id}: neighbour is at {robot_control.neighbour_coords}')
+  # print(f'Send {message}')
+  # print(f'{robot_control.id}: neighbour is at {robot_control.neighbour_coords}')
   emitter.send(message.encode('utf-8'))
 
   

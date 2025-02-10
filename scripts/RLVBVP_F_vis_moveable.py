@@ -12,8 +12,8 @@ import RLVBVP_F
 target_id = 0
 filepath=f'/home/dlserver/Documents/flush/controllers/fan_controller/webots{target_id}.txt'
 #filepath = 'lidar_reading.txt'
-my_loc = [6.0234337176745, -6.5800862187912745, -0.0035308634557531665, 3.141592653589793]
-neighbout_loc = [[5.36297, -6.4929553676205645, -0.016870331120894616, 3.141592653589793]]
+my_loc = [5.061464770933418, -4.7364558335032605, -0.0077863267948965476]
+neighbout_loc = [[5.245825274278991, -5.9107410020987805, -0.12501374031257942]]
 class RLVBVP_Interactive_Vis:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
@@ -32,6 +32,7 @@ class RLVBVP_Interactive_Vis:
         if event.inaxes != self.ax or event.button !=3:
             if event.button ==1:
                 angle = np.arctan2(event.ydata - self.coords[0][1], event.xdata - self.coords[0][0])
+                angle = angle - 0.5 * np.pi
                 self.coords = [[self.coords[0][0], self.coords[0][1], angle]] if self.coords else [[event.xdata, event.ydata, angle]]
                 print(f'Left clicked: now neighbour is {self.coords}')
                 self.agentStep()
@@ -56,11 +57,12 @@ class RLVBVP_Interactive_Vis:
         self.agent.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
         self.agent.visibilityPartitioning()
         self.occ_length = self.agent.control_law() #find contrl law  components
-        print(f'freeArcs: {self.agent.freeArcsComponent}')
-        print(f'occlusionArcs: {self.agent.occlusionArcsComponent}')
-        print(f'coneComponent: {self.agent.coneComponent}')
-        self.velocity =np.array(self.agent.freeArcsComponent) + np.array(self.agent.occlusionArcsComponent) + np.array(self.agent.coneComponent)
-        print(f'self.vel: {self.agent.velocity}')
+        # print(f'freeArcs: {self.agent.freeArcsComponent}')
+        # print(f'occlusionArcs: {self.agent.occlusionArcsComponent}')
+        # print(f'coneComponent: {self.agent.coneComponent}')
+        # self.agent.velocity =np.array(self.agent.freeArcsComponent) + np.array(self.agent.occlusionArcsComponent) + np.array(self.agent.coneComponent)
+        # print(f'self.vel: {self.agent.velocity}')
+        self.agent.move(timestep=32,movement=False)
 
     def plotAll(self):
 
@@ -104,7 +106,7 @@ class RLVBVP_Interactive_Vis:
                                             label='Sensing Radius')
             self.ax.add_patch(circle)
 
-            angle_rad = self.agent.neighbour_coords[0][2]# Convert to radians and adjust for plotting
+            angle_rad = self.agent.neighbour_coords[0][2] + 0.5 * np.pi# Convert to radians and adjust for plotting
             neighbour_angle = angle_rad/(2 * np.pi) * 360
             wedge = Wedge((self.agent.neighbour_coords[0][0], self.agent.neighbour_coords[0][1]), 
                           self.agent.reading_radius, neighbour_angle-self.agent.fov/2, 

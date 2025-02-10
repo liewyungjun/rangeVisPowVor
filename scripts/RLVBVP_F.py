@@ -10,6 +10,7 @@ import numpy as np
 import os
 
 RESOLUTION = 90
+ROTATION_GAIN = 0.01
 
 class OcclusionArc:
     def __init__(self,pos,point1,point2,spacing):
@@ -29,6 +30,8 @@ class OcclusionArc:
             t = np.linspace(0, 1, num_points)
             self.interpolated_points = np.array([(1-t_)*point1_coords + t_*point2_coords for t_ in t])
             #self.interpolated_arc = LineString(interpolated_points)
+        else:
+            self.interpolated_points = []
         self.filtered_points = []
         self.filteredLineString = None
         
@@ -93,8 +96,8 @@ class RLVBVP_F:
                         perm = round(float(temp[i]), 3)
                     readings[i]=perm
             self.readings = readings
-            reading_coords = np.array([[self.readings[i]*np.cos(self.angles[i])+self.pos[0],
-                                 self.readings[i]*np.sin(self.angles[i])+self.pos[1]] 
+            reading_coords = np.array([[self.readings[i]*np.cos(self.angles[i]+self.ori)+self.pos[0],
+                                 self.readings[i]*np.sin(self.angles[i]+self.ori)+self.pos[1]] 
                                  for i in range(len(self.readings))])
             self.reading_coords = reading_coords
             return
@@ -111,8 +114,8 @@ class RLVBVP_F:
             else:
                 readings_temp[i] = readings[i]
         self.readings = readings_temp
-        reading_coords = np.array([[self.readings[i]*np.cos(self.angles[i])+self.pos[0],
-                                 self.readings[i]*np.sin(self.angles[i])+self.pos[1]] 
+        reading_coords = np.array([[self.readings[i]*np.cos(self.angles[i]+self.ori)+self.pos[0],
+                                 self.readings[i]*np.sin(self.angles[i]+self.ori)+self.pos[1]] 
                                  for i in range(len(self.readings))])
         self.reading_coords = reading_coords
         return
@@ -125,6 +128,7 @@ class RLVBVP_F:
             if shapely.distance(Point(i[0],i[1]),Point(self.pos[0],self.pos[1]))<self.comms_radius:
                 neighbour_coords.append(i)
         self.neighbour_coords = neighbour_coords
+        #print(f'neighbour coords are {neighbour_coords}')
         return
 
     def process_lidar_data(self):
@@ -142,8 +146,8 @@ class RLVBVP_F:
         for i in range(len(self.readings)):
             
             if i !=0 and abs(self.readings[i] - self.readings[i-1]) > self.reading_radius * 0.05: #big enough jump for occlusion
-                p1 = Point(0.999*self.readings[i-1]*np.cos(self.angles[i-1])+self.pos[0],0.999*self.readings[i-1]*np.sin(self.angles[i-1])+self.pos[1])
-                p2 = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
+                p1 = Point(0.999*self.readings[i-1]*np.cos(self.angles[i-1]+self.ori)+self.pos[0],0.999*self.readings[i-1]*np.sin(self.angles[i-1]+self.ori)+self.pos[1])
+                p2 = Point(0.999*self.readings[i]*np.cos(self.angles[i]+self.ori)+self.pos[0],0.999*self.readings[i]*np.sin(self.angles[i]+self.ori)+self.pos[1])
 
                 try:
                     occlusionCoord.append(OcclusionArc(self.pos,p1,p2,1/self.readingPerUnitLength))
@@ -163,8 +167,8 @@ class RLVBVP_F:
                     obstacleLines.append(temp)
                     temp = []
             else: #collision
-                obsPoint = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],\
-                                 0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
+                obsPoint = Point(0.999*self.readings[i]*np.cos(self.angles[i]+self.ori)+self.pos[0],\
+                                 0.999*self.readings[i]*np.sin(self.angles[i]+self.ori)+self.pos[1])
                 temp.append(obsPoint)
             
         if temp:
@@ -210,7 +214,7 @@ class RLVBVP_F:
             for j in self.neighbour_coords:
                 neighbourPoint = Point(j[0], j[1])
                 dist_to_neighbor = neighbourPoint.distance(point)
-                neighbourAngle = j[2]
+                neighbourAngle = j[2] + 0.5 * np.pi
                 # Calculate angle between point and neighbour
                 dx = point.x - neighbourPoint.x
                 dy = point.y - neighbourPoint.y
@@ -218,6 +222,7 @@ class RLVBVP_F:
                 angle_diff = abs(angle - neighbourAngle)
                 if angle_diff > math.pi:
                     angle_diff = 2*math.pi - angle_diff
+                #print(f'angle diff: {angle_diff}')
                 if angle_diff > self.fov_in_radians/2:
                     continue                
                 if dist_to_neighbor < dist_to_self: 
@@ -244,7 +249,7 @@ class RLVBVP_F:
                 for k in self.neighbour_coords:
                     neighbourPoint = Point(k[0], k[1])
                     #TODO: continue only if neighbour angle constraint satisfied
-                    neighbourAngle = k[2]
+                    neighbourAngle = k[2]+ 0.5 * np.pi
                     # Calculate angle between point and neighbour
                     dx = point.x - neighbourPoint.x
                     dy = point.y - neighbourPoint.y
@@ -281,7 +286,8 @@ class RLVBVP_F:
                 for k in self.neighbour_coords:
                     neighbourPoint = Point(k[0], k[1])
                     #TODO: continue only if neighbour angle constraint satisfied
-                    neighbourAngle = k[2]
+                    neighbourAngle = k[2]+ 0.5 * np.pi
+                    #print(f'neighbour Angle to cone point: {neighbourAngle}')
                     # Calculate angle between point and neighbour
                     dx = point.x - neighbourPoint.x
                     dy = point.y - neighbourPoint.y
@@ -389,21 +395,40 @@ class RLVBVP_F:
                 #print(f'coneComponent += {normal} * {self.readingPerUnitLength}')
                 coneComponent += normal * self.readingPerUnitLength * np.linalg.norm(line_vector)
         self.coneComponent = coneComponent
+        #print(f'cone component calculation: {self.coneComponent}')
         return occ_length
     
-
-    def move(self,timestep,log = False):
-        print(f'freeArcs: {self.freeArcsComponent}')
-        print(f'occlusionArcs: {self.occlusionArcsComponent}')
-        print(f'coneComponent: {self.coneComponent}')
+    def local_transform(self,theta, x_move, y_move):
+        x_global = x_move * math.cos(theta) - y_move * math.sin(theta)
+        y_global = x_move * math.sin(theta) + y_move * math.cos(theta)
+        return x_global, y_global    
+    
+    def move(self,timestep,log = False,movement=True):
+        
         self.velocity =np.array(self.freeArcsComponent) + np.array(self.occlusionArcsComponent) + np.array(self.coneComponent)
-        print(f'self.vel: {self.velocity}')
-        print(f' times: {(timestep/25000)}')
-        movement_step = self.velocity * (timestep/25000)
+        # print(f'freeArcs: {self.freeArcsComponent}')
+        # print(f'occlusionArcs: {self.occlusionArcsComponent}')
+        # print(f'coneComponent: {self.coneComponent}')
+        # print(f'self.vel: {self.velocity}')
+        # print(f' times: {(timestep/25000)}')
 
+        movement_step = self.velocity * (timestep/25000)
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
-        print(f'movement step: {movement_step}')
-        self.pos +=movement_step
+        
+        angle = math.atan2(movement_step[1], movement_step[0])
+        magnitude = np.linalg.norm(movement_step)
+
+        # print(f'movement step: {movement_step}')
+        # print(f'cur pos: {self.pos}')
+        # print(f'cur ori: {self.ori}')
+        # print(f'movement angle: {angle}, magnitude: {magnitude}')
+
+        if movement:
+            self.pos +=movement_step
+            if np.linalg.norm(movement_step) > 0.01:
+                diff = angle - (self.ori + 0.5 * np.pi)
+                #print(f'angle diff = {angle} - {self.ori + 0.5 * np.pi} = {diff}')
+                self.ori += ROTATION_GAIN*diff
         if log:
             self.writeReadings()
     
