@@ -35,7 +35,7 @@ class OcclusionArc:
         self.filteredLineString = None                
             
 #Range-Limited Visbility-Based Voronoi Partitioning 
-class RLVBVP3:
+class RLVBVP4:
     def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt',id=0):
         self.pos = pos
         self.id = id
@@ -45,6 +45,7 @@ class RLVBVP3:
         self.readings = []
         self.angles = np.linspace(0.5*np.pi, -1.5*np.pi, resolution, endpoint=False)
         self.reading_coords = []
+        self.obstacleLines = []
 
         self.freePointCoords = [] #list of 2d arr
         self.occlusionArcs = [] 
@@ -52,10 +53,13 @@ class RLVBVP3:
         self.neighbour_coords = []
 
         self.filteredFreePointCoords=[] #list of Points
-        #self.filteredOcclusionCoords=[]
 
         self.freeArcsComponent = [0.0,0.0]
         self.occlusionArcsComponent = [0.0,0.0]
+
+        self.grid_centroid = np.zeros(2)
+        self.grid_dim = np.zeros(2)
+        self.state = 0 # 0 for Kantaros, 1 for grid navigation
         
         self.logger = logging.getLogger(__name__)
         this_dir, this_filename = os.path.split(__file__)
@@ -102,8 +106,6 @@ class RLVBVP3:
                                  self.readings[i]*np.sin(self.angles[i])+self.pos[1]] 
                                  for i in range(len(self.readings))])
         self.reading_coords = reading_coords
-        #print(f"read in {len(readings)}")
-        #print(self.reading_coords)
         return
     
     def read_neighbors(self,neighbours):
@@ -121,17 +123,11 @@ class RLVBVP3:
         occlusionCoord = []
         obstacleLines = []
         temp = []
-        #print(len(self.readings))
-        #print(self.readings)
-        #print(self.angles)
         for i in range(len(self.readings)):
             
             if abs(self.readings[i] - self.readings[i-1]) > self.reading_radius * 0.05: #big enough jump for occlusion
-                # logger.info(f'adding point {i}')
-                # logger.info(f'because {readings[i]}-{readings[i-1]}')
                 p1 = Point(0.999*self.readings[i-1]*np.cos(self.angles[i-1])+self.pos[0],0.999*self.readings[i-1]*np.sin(self.angles[i-1])+self.pos[1])
                 p2 = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
-
                 try:
                     occlusionCoord.append(OcclusionArc(self.pos,p1,p2))
                 except ValueError:
@@ -149,6 +145,7 @@ class RLVBVP3:
                 if temp:
                     obstacleLines.append(temp)
                     temp = []
+
             else: #collision
                 obsPoint = Point(0.999*self.readings[i]*np.cos(self.angles[i])+self.pos[0],\
                                  0.999*self.readings[i]*np.sin(self.angles[i])+self.pos[1])
@@ -159,6 +156,7 @@ class RLVBVP3:
         self.freePointCoords = freePointCoord
         self.occlusionArcs = occlusionCoord
         obstacleLinesObj  = []
+
         for i in obstacleLines:
             if len(i)>1:
                 lineObj = LineString(i)
@@ -169,10 +167,7 @@ class RLVBVP3:
     ################################################################################################
     def visibilityPartitioning(self):
         #raycast every point in self.reading_coords
-        #TODO: do this for multiple neighbours i.e. hardcoded self.neighbour_coords[0]
-        #TODO: relative point positioning
         filteredFreePointCoords = []
-        #filteredOcclusionCoords = []
 
         if not self.neighbour_coords: # no neighbours
             filteredFreePointCoords = [Point(i[0], i[1]) for i in self.freePointCoords]
@@ -181,10 +176,8 @@ class RLVBVP3:
                 for j in i.interpolated_points:
                     point = Point(j[0], j[1])
                     i.filtered_points.append(point)
-                #filteredOcclusionCoords.append(point)
                 if len(i.filtered_points)>2:
                     i.filteredLineString = LineString(i.filtered_points)
-            #self.filteredOcclusionCoords = filteredOcclusionCoords
             return 
         
         for i in self.freePointCoords:
@@ -206,7 +199,6 @@ class RLVBVP3:
                         break
             if not neighbourCanSee:
                 filteredFreePointCoords.append(point)
-
         self.filteredFreePointCoords = filteredFreePointCoords[:]
 
         
@@ -237,7 +229,7 @@ class RLVBVP3:
                 i.filteredLineString = LineString(i.filtered_points)
         return
 
-    def control_law(self):
+    def control_law(self,densityFunction=None):
         freeArcsComponentArr = np.zeros(2)
         for i in self.filteredFreePointCoords:
             # Calculate direction vector from robot to point
@@ -245,9 +237,11 @@ class RLVBVP3:
             # Normalize to unit vector
             norm = np.linalg.norm(direction)
             if norm > 0:
-                unit_vector = direction / norm
+                if not densityFunction:
+                    unit_vector = direction / norm
+                #else: 
+                    # TODO: weigh unit vectors with direction to self.grid_centroid
                 freeArcsComponentArr += unit_vector
-        #print(f'free length: {len(self.filteredFreePointCoords)}')
         self.freeArcsComponent = freeArcsComponentArr
 
         occ_length = 0
@@ -263,48 +257,41 @@ class RLVBVP3:
                 distances = [Point(self.pos[0], self.pos[1]).distance(Point(x, y)) for x, y in coords]
                 nearest_idx = np.argmin(distances)
                 furthest_idx = np.argmax(distances)
-                #print(f'nearest: {nearest_idx}, furthest: {furthest_idx}')
-                
                 pa = coords[nearest_idx]
                 pb = coords[furthest_idx]
                 pr = np.array([i.reflex.x,i.reflex.y])
-                
-                # Calculate direction vector of the line
-                line_vector = coords[-1] - coords[0]
-                
-                # Calculate normal vector (rotate 90 degrees counterclockwise)
-                normal = np.array([-line_vector[1], line_vector[0]])
-                
-                # Normalize the normal vector
-                normal = normal / np.linalg.norm(normal)
-                
-                # Ensure normal points inward by checking if it points towards self.pos
-                center_to_line = np.array([self.pos[0], self.pos[1]]) - coords[0]
+                line_vector = coords[-1] - coords[0] # Calculate direction vector of the line
+                normal = np.array([-line_vector[1], line_vector[0]]) # Calculate normal vector (rotate 90 degrees counterclockwise)
+                normal = normal / np.linalg.norm(normal) # Normalize the normal vector
+                center_to_line = np.array([self.pos[0], self.pos[1]]) - coords[0] # Ensure normal points inward by checking if it points towards self.pos
                 if np.dot(normal, center_to_line) < 0:
                     normal = -normal
-                
                 densityComponent = (1-math.pow(np.linalg.norm(pa-pr)/np.linalg.norm(pb-pr),2))/2
-                #print(f'density component: {densityComponent}')
                 tempComponent = normal * math.pow(np.linalg.norm(pb-pr),2) / np.linalg.norm(pr-self.pos) * densityComponent
-                #print(f'temp component: {normal} * {math.pow(np.linalg.norm(pb-pa),2)} / {(np.linalg.norm(pr-self.pos) * densityComponent)}')
-                #print(f'adding temp occ component: {tempComponent}')
                 occlusionArcsComponentArr += tempComponent * readingPerUnitLength
-        #print(f'occ length: {occ_length}')
         self.occlusionArcsComponent = occlusionArcsComponentArr
         return occ_length
-    
 
     def move(self,timestep,log = False):
         self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
         movement_step = self.velocity * timestep/25000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
-        
-        #self.readPos()
         self.pos +=movement_step
         if log:
             self.writeReadings()
     
-    def readPos(self,positionReading):
+    def step(self,neighbourArr,range_image,timestep,log=False):
+        self.read_neighbors(neighbourArr)
+        self.get_lidar_data(range_image)
+        self.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
+        self.visibilityPartitioning() #find filteredFreePoints and occlusion filtered linestrings
+        if self.state == 0:
+            occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
+        elif self.state == 1: #TODO: state transition and grid centroid update
+            occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
+        self.move(timestep,log)
+
+    def readPos(self,positionReading): #update position based on simulation feedback
         if positionReading:
             self.pos[0] = positionReading[0]
             self.pos[1] = positionReading[1]
