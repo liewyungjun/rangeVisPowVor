@@ -1,0 +1,306 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/festo/robotino3/protos/Robotino3.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/advertising_board/protos/AdvertisingBoard.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.5650500970877033 0.5712099056164593 0.5953466481864265 2.1034062846110464
+  position 22.53474094586414 23.963151024563793 76.33295519090606
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 15 15 0
+  floorSize 40 40
+  floorTileSize 20 20
+  floorAppearance PBRAppearance {
+  }
+  wallHeight 1
+}
+DEF ROBOT0 Robotino3 {
+  hidden position_0_0 1.2196430720820895e-06
+  hidden position_0_1 -1.4966638307928725e-06
+  hidden position_0_2 3.5354573376364877e-07
+  hidden linearVelocity_0 -0.001779655693684354 0.0004015447544566107 -0.0006184679768274559
+  hidden angularVelocity_0 0.0040424743333406675 0.01789395019184311 5.857313413129459e-07
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 -1 0 0.08229482772016095
+  hidden linearVelocity_1 0.0011306605239562635 -0.0002557447642795937 0.003232587108142359
+  hidden angularVelocity_1 0.0040470033088477455 0.017901260893322297 5.815393584370263e-07
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -1 0 0.004786024913990856
+  hidden linearVelocity_2 0.0011315167351511472 -0.00025571960570501545 -0.0022437190714073817
+  hidden angularVelocity_2 0.004043793873065432 0.017903133332381155 5.811331308272767e-07
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 0.9999999999999999 0 0.026714952045542632
+  hidden linearVelocity_3 0.001131359215738113 -0.00025575144560598204 -0.0008783851036050091
+  hidden angularVelocity_3 0.004045041899343763 0.01790334139338127 5.786253535937987e-07
+  translation 31.999770997499287 24.978585874846384 -0.006786101052027982
+  rotation -0.07086611194283132 0.057960219378562286 0.9958004856133054 0.020063522682041302
+  name "0"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  hidden position_0_0 -7.113786670403655e-07
+  hidden position_0_1 -1.6772895784007666e-06
+  hidden position_0_2 7.05719908907078e-07
+  hidden linearVelocity_0 0.000272584921161266 -0.0002778827972278441 -0.0006503668802838732
+  hidden angularVelocity_0 -0.002798104446754191 -0.0027326739984570737 1.5180900823031278e-06
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 -0.9999999999999999 0 0.0016290544826200962
+  hidden linearVelocity_1 -0.00017253331777559243 0.00017705957674618773 -0.0005002409596880277
+  hidden angularVelocity_1 -0.0027996989223515473 -0.00273189186688293 1.5210575582440358e-06
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -1 0 0.12047130625404247
+  hidden linearVelocity_2 -0.0001723389304968617 0.0001770186754504745 0.0006891749247207014
+  hidden angularVelocity_2 -0.002799491759951111 -0.002733088613920947 1.5208077476813958e-06
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 1 0 0.0897423452468903
+  hidden linearVelocity_3 -0.0001724236700258645 0.00017701369353160395 -0.00016990088859364632
+  hidden angularVelocity_3 -0.0028007962463273486 -0.0027327530769439027 1.5241653491458071e-06
+  translation 30.09746974206086 30.524701031754866 -0.006747874094860634
+  rotation -0.6787845792839612 0.7310058571410345 0.06987082189152298 0.0031036243555514734
+  name "2"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  hidden position_0_0 9.542295444219344e-07
+  hidden position_0_1 -1.100099080920231e-06
+  hidden position_0_2 9.475414833864826e-07
+  hidden linearVelocity_0 -5.416188694771818e-05 8.018240859704166e-05 -0.0006374940054833465
+  hidden angularVelocity_0 0.0008064090385289538 0.0005283063415527532 -1.885329032521164e-08
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 1 0 9.541398640622064e-07
+  hidden linearVelocity_1 3.2900446018672394e-05 -5.10395802192197e-05 0.00010979984117256048
+  hidden angularVelocity_1 0.0008079893703647851 0.0005286485344574354 -2.159415715080343e-08
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -1 0 1.1002668703779558e-06
+  hidden linearVelocity_2 3.285323880026071e-05 -5.096418637571435e-05 -0.0001662694435962631
+  hidden angularVelocity_2 0.0008057221939084659 0.0005272623405846904 -1.4979338708769297e-08
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 1 0 9.476013836613175e-07
+  hidden linearVelocity_3 3.286009077138591e-05 -5.085396611912372e-05 0.00011419107909983988
+  hidden angularVelocity_3 0.0008046908917971249 0.0005283553549006517 -1.6327746088973417e-08
+  translation 26.21959716599599 26.031820028194723 -0.006749142268733771
+  rotation -0.40515154764960426 0.19937367244324156 0.8922456848725162 0.006911199682045936
+  name "1"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  hidden position_0_0 1.0465028942528192e-06
+  hidden position_0_1 -1.5491766217142535e-06
+  hidden position_0_2 7.0238745598969e-07
+  hidden linearVelocity_0 8.758566767272751e-05 -0.00014936775504537602 -0.000658304579446177
+  hidden angularVelocity_0 -0.0015068605601958108 -0.0008830200767046394 9.831530914341081e-07
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 1 0 1.812804499357409e-07
+  hidden linearVelocity_1 -5.5857264216888905e-05 9.5473855604978e-05 -0.0001722110999821209
+  hidden angularVelocity_1 -0.0015087285405724197 -0.0008816641447451608 9.851824111687774e-07
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -0.9999999999999999 0 0.1772865080172479
+  hidden linearVelocity_2 -5.5878403169203774e-05 9.550174459640914e-05 0.0003036254454175957
+  hidden angularVelocity_2 -0.0015083012692047493 -0.0008838987370845893 9.89211748048573e-07
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 1 0 0.02352828660292201
+  hidden linearVelocity_3 -5.584562082253657e-05 9.546030313344544e-05 -0.0001379402898866708
+  hidden angularVelocity_3 -0.0015102646239411018 -0.000882454255125457 9.898846398020624e-07
+  translation 24.329332821509283 31.605525207944087 -0.006746354734890422
+  rotation -0.14659091047157208 0.11620468797197887 0.982347991019705 0.019869078941108165
+  name "1(1)"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+  bottomSlot [
+    Pen {
+    }
+  ]
+}
+DEF ROBOT Robot {
+  translation 28.39 28.44 2
+  controller "Robot_controller"
+  supervisor TRUE
+}
+AdvertisingBoard {
+  translation -4.04 11.2 0
+  rotation 0 0 1 -1.5707953071795862
+  displayWidth 9
+}
+AdvertisingBoard {
+  translation 5.99 23.95 0
+  rotation 0 0 1 -1.5707953071795862
+  name "advertising board(7)"
+}
+AdvertisingBoard {
+  translation 7.9 11.67 0
+  rotation 0 0 1 1.01503e-06
+  name "advertising board(2)"
+  displayWidth 9
+}
+AdvertisingBoard {
+  translation 8.2 26.73 0
+  rotation 0 0 1 1.01503e-06
+  name "advertising board(8)"
+  displayWidth 6
+}
+AdvertisingBoard {
+  translation 8 20.14 0
+  rotation 0 0 1 1.01503e-06
+  name "advertising board(6)"
+  displayWidth 9
+}
+AdvertisingBoard {
+  translation 20.09 -2 0
+  rotation 0 0 1 1.01503e-06
+  name "advertising board(3)"
+  displayWidth 9
+}
+AdvertisingBoard {
+  translation 31.72 2.51 -0.37
+  rotation 0 0 1 -1.5707953071795862
+  name "advertising board(4)"
+  displayWidth 9
+}
+DEF WALL0 Solid {
+  translation 22.39 28.44 2
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+        }
+      }
+      geometry Box {
+        size 0.05 12 0.05
+      }
+    }
+  ]
+}
+DEF WALL1 Solid {
+  translation 34.39 28.44 2
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+        }
+      }
+      geometry Box {
+        size 0.05 12 0.05
+      }
+    }
+  ]
+  name "solid(1)"
+}
+DEF WALL2 Solid {
+  translation 28.39 22.44 2
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+        }
+      }
+      geometry Box {
+        size 12 0.05 0.05
+      }
+    }
+  ]
+  name "solid(2)"
+}
+DEF WALL3 Solid {
+  translation 28.39 34.44 2
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+        }
+      }
+      geometry Box {
+        size 12 0.05 0.05
+      }
+    }
+  ]
+  name "solid(3)"
+}

@@ -303,6 +303,14 @@ class RLVBVP3:
         self.pos +=movement_step
         if log:
             self.writeReadings()
+
+    def step(self,neighbourArr,range_image,timestep,log=False):
+        self.read_neighbors(neighbourArr)
+        self.get_lidar_data(range_image)
+        self.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
+        self.visibilityPartitioning() #find filteredFreePoints and occlusion filtered linestrings
+        occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
+        self.move(timestep,log)
     
     def readPos(self,positionReading):
         if positionReading:

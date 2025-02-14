@@ -36,7 +36,8 @@ class OcclusionArc:
             
 #Range-Limited Visbility-Based Voronoi Partitioning 
 class RLVBVP4:
-    def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt',id=0):
+    def __init__(self, pos, comms_radius,reading_radius,resolution,lidar_path = 'lidar_reading2.txt',id='0',
+                 grid_centroid = np.zeros(2), grid_dim = np.array([5.0,5.0])):
         self.pos = pos
         self.id = id
         self.comms_radius = comms_radius
@@ -57,9 +58,9 @@ class RLVBVP4:
         self.freeArcsComponent = [0.0,0.0]
         self.occlusionArcsComponent = [0.0,0.0]
 
-        self.grid_centroid = np.zeros(2)
-        self.grid_dim = np.zeros(2)
-        self.state = 0 # 0 for Kantaros, 1 for grid navigation
+        self.grid_centroid = grid_centroid
+        self.grid_dim = grid_dim
+        self.state = 0 
         
         self.logger = logging.getLogger(__name__)
         this_dir, this_filename = os.path.split(__file__)
@@ -110,7 +111,11 @@ class RLVBVP4:
     
     def read_neighbors(self,neighbours):
         neighbour_coords = []
+        if not neighbours:
+            self.neighbour_coords = []
+            return
         if neighbours[0] == []:
+            self.neighbour_coords = []
             return
         for i in neighbours:
             if shapely.distance(Point(i[0],i[1]),Point(self.pos[0],self.pos[1]))<self.comms_radius:
@@ -229,19 +234,33 @@ class RLVBVP4:
                 i.filteredLineString = LineString(i.filtered_points)
         return
 
-    def control_law(self,densityFunction=None):
+    def control_law(self):
         freeArcsComponentArr = np.zeros(2)
+        tempsum = np.zeros(2)
+        txt = []
         for i in self.filteredFreePointCoords:
             # Calculate direction vector from robot to point
             direction = np.array([i.x - self.pos[0], i.y - self.pos[1]])
             # Normalize to unit vector
             norm = np.linalg.norm(direction)
             if norm > 0:
-                if not densityFunction:
-                    unit_vector = direction / norm
-                #else: 
-                    # TODO: weigh unit vectors with direction to self.grid_centroid
-                freeArcsComponentArr += unit_vector
+                unit_vector = direction / norm
+                density_vector = np.zeros(2)
+                if self.state == 1:
+                    vector_to_target = np.array([self.grid_centroid[0] - self.pos[0], self.grid_centroid[1] - self.pos[1]])
+                    angle_to_target = np.arctan2(vector_to_target[1], vector_to_target[0])
+                    angle_of_unit_vector = np.arctan2(unit_vector[1], unit_vector[0])
+                    angle_difference = angle_to_target - angle_of_unit_vector
+                    angle_difference = (angle_difference + np.pi) % (2 * np.pi) - np.pi  # Normalize to [-pi, pi]
+                    angle_weight = 1 - abs(angle_difference) / np.pi  # Map to [0, 1]
+                    density_vector = angle_weight * unit_vector
+                added_vec = unit_vector + density_vector
+                freeArcsComponentArr += added_vec
+        #         if self.id == '0':
+        #             txt.append(f'[{i.x},{i.y}],[{added_vec[0]},{added_vec[1]}]')
+        # if self.id == '0':
+        #     with open('check.txt', 'w') as f:
+        #                 f.write('\n'.join(txt))
         self.freeArcsComponent = freeArcsComponentArr
 
         occ_length = 0
@@ -272,24 +291,31 @@ class RLVBVP4:
         self.occlusionArcsComponent = occlusionArcsComponentArr
         return occ_length
 
-    def move(self,timestep,log = False):
+    def move(self,timestep,log = False,move = True):
         self.velocity =self.freeArcsComponent + self.occlusionArcsComponent
         movement_step = self.velocity * timestep/25000
         movement_step = np.clip(movement_step, -5.0*32/1000, 5.0*32/1000)
-        self.pos +=movement_step
+        if move:
+            self.pos +=movement_step
         if log:
             self.writeReadings()
     
-    def step(self,neighbourArr,range_image,timestep,log=False):
+    def step(self,neighbourArr,range_image,timestep,log=False,move=True):
         self.read_neighbors(neighbourArr)
         self.get_lidar_data(range_image)
         self.process_lidar_data() #find self.freePointIdx and self.occlusionArcs
         self.visibilityPartitioning() #find filteredFreePoints and occlusion filtered linestrings
-        if self.state == 0:
-            occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
-        elif self.state == 1: #TODO: state transition and grid centroid update
-            occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
-        self.move(timestep,log)
+        occ_length = self.control_law() #find freeArcsComponent and occlusionArcsComponent
+        self.move(timestep,log,move)
+        if (self.grid_centroid[0] - self.grid_dim[0] / 2 <= self.pos[0] <= self.grid_centroid[0] + self.grid_dim[0] / 2) and \
+           (self.grid_centroid[1] - self.grid_dim[1] / 2 <= self.pos[1] <= self.grid_centroid[1] + self.grid_dim[1] / 2):
+            #if self.state == 1:
+                #print(f'{self.id}: INSIDE GRID')
+            self.state = 1
+        else:
+            #if self.state == 0:
+                #print(f'{self.id}: OUT OF GRID')
+            self.state = 1
 
     def readPos(self,positionReading): #update position based on simulation feedback
         if positionReading:

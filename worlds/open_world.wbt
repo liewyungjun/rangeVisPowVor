@@ -1,0 +1,113 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/festo/robotino3/protos/Robotino3.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/appearances/protos/Parquetry.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/balls/protos/Ball.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.3340559655050623 0.2823910495532713 0.8992563077580732 1.688489987173587
+  position 20.164442740156538 -22.64038541586808 23.97973396670505
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 15 15 0
+  floorSize 30 30
+  floorTileSize 20 20
+  floorAppearance Parquetry {
+    type "dark strip"
+  }
+  wallHeight 1
+}
+DEF ROBOT0 Robotino3 {
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 -1 0 0.08229483472929741
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -1 0 0.004785840778724672
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 1 0 0.026714797804868008
+  translation 26.46188295338113 12.081895455981204 -0.021221319863735683
+  rotation 0.006455498590198192 0.019299479655791027 0.999792906867701 0.01828169997564452
+  name "0"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+  middleSlot [
+    PointLight {
+      attenuation 0 0 0.01
+      color 0.937255 0.160784 0.160784
+      location 0 0.3 0
+    }
+  ]
+}
+DEF ROBOT0 Robotino3 {
+  hidden translation_1 0 0 0
+  hidden rotation_1 0 -1 0 0.08229483472929201
+  hidden translation_2 0 0 0
+  hidden rotation_2 0 -1 0 0.004785840778817465
+  hidden translation_3 0 0 0
+  hidden rotation_3 0 1 0 0.026714797804851385
+  translation 18.4009 12.1735 -0.0199766
+  rotation -0.011183629342736364 0.024548601187255017 0.9996360800883857 0.029783831949694913
+  name "0(1)"
+  controller "supervisor_controller"
+  supervisor TRUE
+  topSlot [
+    Lidar {
+      translation 0 0 0.1
+      rotation 0 0 1 -1.5707953071795862
+      horizontalResolution 540
+      fieldOfView 6.28318
+      numberOfLayers 1
+      maxRange 3
+    }
+  ]
+  bodySlot [
+    Emitter {
+      range 6
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
+}
+DEF ROBOT Robot {
+  translation 20.97 12.24 2
+  children [
+    Ball {
+      translation 0 0 0.16249484566074424
+      radius 0.5
+    }
+  ]
+  recognitionColors [
+    0 0 0
+  ]
+  controller "Robot_controller"
+  supervisor TRUE
+}
